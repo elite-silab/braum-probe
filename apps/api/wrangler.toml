@@ -8,7 +8,7 @@ compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
 # ===========================================
-# Production 环境
+# 默认/生产环境
 # ===========================================
 
 [vars]
@@ -37,36 +37,4 @@ crons = [
   "0 * * * *",     # 每小时整点：小时聚合
   "0 2 * * *",     # 每天凌晨 2 点：日聚合
   "0 3 * * *",     # 每天凌晨 3 点：过期数据清理
-]
-
-# ===========================================
-# Staging 环境
-# ===========================================
-
-[env.staging]
-name = "braum-worker-staging"
-
-[env.staging.vars]
-APP_VERSION = "0.1.0"
-CORS_ORIGINS = "https://replace-with-staging-pages-domain.example.com"
-AGENT_API_URL = "https://api-staging.replace-with-your-domain.example.com"
-AGENT_RELEASE_BASE_URL = "https://github.com/elite-silab/braum-probe/releases/latest/download"
-
-[[env.staging.d1_databases]]
-binding = "DB"
-database_name = "braum-staging"
-database_id = "<replace-with-staging-d1-id>"
-migrations_dir = "migrations"
-
-[[env.staging.kv_namespaces]]
-binding = "CACHE"
-id = "<replace-with-staging-kv-id>"
-
-[env.staging.triggers]
-crons = [
-  "*/2 * * * *",
-  "* * * * *",
-  "0 * * * *",
-  "0 2 * * *",
-  "0 3 * * *",
 ]

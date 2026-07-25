@@ -153,12 +153,12 @@ apps/api/migrations/0003_init_incidents.sql
 
 规则：
 
-- 已进入共享环境（staging/production）的 migration 永不修改；修正必须新增 migration。
-- CI 在空库执行全量 migration 验证；staging 环境自动执行 pending migrations。
+- 已进入生产环境的 migration 永不修改；修正必须新增 migration。
+- CI 在空库执行全量 migration 验证；生产部署由 Cloudflare Git 集成执行 pending migrations。
 - 生产采用"扩展 → 应用切换 → 收缩"：先增加兼容字段/表，部署读写新旧结构的 Workers，最后在后续版本移除旧结构。
 - `probe_results` 等大表变更避免长时间锁表；数据回填拆成可恢复的 Cron 任务。
 - 禁止通过 Cloudflare Dashboard 控制台手工修改生产 D1 schema。
-- 部署前执行 `wrangler d1 migrations apply <db> --env staging --dry-run` 确认变更内容。
+- 部署前执行 `wrangler d1 migrations apply DB --remote --dry-run` 确认变更内容。
 
 ## 7. API 契约与类型安全
 
@@ -229,13 +229,13 @@ tmp/
 - [ ] D1 migration 在空库与升级路径通过（`wrangler d1 migrations apply --local`）。
 - [ ] 索引覆盖主要查询路径，使用 `EXPLAIN QUERY PLAN` 验证。
 - [ ] 新增本地变量已记录到 `.env.example`；新增生产 Secret 已记录到配置与部署文档。
-- [ ] `wrangler.toml` 中 staging 和 production 配置保持同步。
+- [ ] `wrangler.toml` 默认/生产配置与部署文档保持同步。
 - [ ] 部署和回滚不依赖不可逆的 schema 删除。
 
 ## 10. Release 与 hotfix
 
-- 合并 `main` 后由 CI 自动执行 `wrangler deploy --env staging`，部署到 staging 环境验证。
-- 生产发布通过打版本标签（`v*`）触发 CI，依次执行 D1 migration → Workers deploy → Pages deploy。
+- 合并 `main` 后由 CI 执行检查、类型检查和构建；Cloudflare Git 集成负责部署。
+- 生产发布由 Cloudflare Workers/Pages 的 Git 集成执行 D1 migration、Workers deploy 和 Pages deploy。
 - hotfix 从当前生产标签创建，合并回 `main` 后正常发布，不维护独立长期分支。
 - Workers 回滚使用 `wrangler versions rollback`，秒级全球生效；Pages 回滚通过 Dashboard 或 API 恢复到上一部署。
 - D1 回滚优先使用 Time Travel（30 天），避免执行高风险 down migration。

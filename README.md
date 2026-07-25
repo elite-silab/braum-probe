@@ -96,37 +96,124 @@
 
 ## 🚀 快速开始
 
-### 30 秒了解 Braum
+> **你需要**：一个 Cloudflare 账号（免费）+ 一台 VPS。不需要域名，Cloudflare 会给你免费的 `workers.dev` 和 `pages.dev` 地址。
 
-1. Fork 本仓库 → 在 Cloudflare 控制台创建 D1 + KV + Worker + Pages
-2. 编辑 `apps/api/wrangler.toml` 填入资源 ID
-3. 在 Cloudflare 控制台设置 4 个密钥 → GitHub Actions 一键部署
+### 第一步：Fork 仓库
 
-详细步骤见 [部署指南](docs/部署运维文档.md)。
+打开本仓库 → 右上角 **Fork** → **Create fork**
+
+### 第二步：发布 Agent
+
+Fork 仓库 → **Actions** → 启用工作流 → 左侧 **Agent Release** → **Run workflow** → 等变绿
+
+### 第三步：创建 D1 数据库
+
+Cloudflare 控制台 → **Storage & Databases → D1** → **Create database**
+- 名称：`braum-production`
+- 复制 **Database ID**
+
+### 第四步：创建 KV
+
+Cloudflare 控制台 → **Storage & Databases → KV** → **Create namespace**
+- 名称：`braum-cache`
+- 复制 **Namespace ID**
+
+### 第五步：编辑配置
+
+在 GitHub 打开 `apps/api/wrangler.toml` → 点铅笔 ✏️ → 改三处：
+
+```toml
+# 改成你的 GitHub 用户名
+AGENT_RELEASE_BASE_URL = "https://github.com/你的用户名/braum-probe/releases/latest/download"
+
+# 粘贴 D1 Database ID
+database_id = "xxxx-xxxx-xxxx"
+
+# 粘贴 KV Namespace ID
+id = "xxxx-xxxx-xxxx"
+```
+
+点 **Commit changes** 保存。
+
+### 第六步：部署 Worker（API）
+
+Cloudflare → **Workers & Pages** → **Create** → **Import from Git** → 选你的 Fork 仓库
+
+| 设置 | 值 |
+|------|-----|
+| Project name | `braum-worker` |
+| Build command | `pnpm --filter @braum/shared build` |
+| Deploy command | `pnpm --filter @braum/shared build && pnpm --filter @braum/api deploy:full` |
+| Node version | `22` |
+
+部署成功后复制 Worker 地址（如 `https://braum-worker.xxx.workers.dev`）。
+
+进入 Worker **Settings → Variables and Secrets**，添加 4 个 **Secret**：
+
+| 名称 | 值 |
+|------|-----|
+| `JWT_SECRET` | 随机长字符串 |
+| `JWT_REFRESH_SECRET` | 另一个随机长字符串 |
+| `ENCRYPTION_KEY` | 再一个随机长字符串 |
+| `ADMIN_INITIAL_PASSWORD` | 你自己设的登录密码 |
+
+保存后重新 **Deploy** 一次。
+
+### 第七步：部署 Pages（前端）
+
+Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+
+| 设置 | 值 |
+|------|-----|
+| Project name | `braum-web` |
+| Build command | `pnpm --filter @braum/shared build && pnpm --filter @braum/web build` |
+| Build output | `apps/web/dist` |
+
+Pages **Settings → Variables and Secrets** 添加：
+
+| 名称 | 值 |
+|------|-----|
+| `PUBLIC_API_URL` | 第六步的 Worker 地址 |
+
+重新部署。最后回 GitHub 再编辑一次 `wrangler.toml`，补上：
+
+```toml
+CORS_ORIGINS = "https://braum-web.你的账号.pages.dev"
+AGENT_API_URL = "https://braum-worker.你的账号.workers.dev"
+```
+
+### 第八步：登录 + 安装 VPS
+
+1. 打开 `https://braum-web.你的账号.pages.dev/admin`
+2. 邮箱：`admin@braum.local`，密码：你第六步设的密码
+3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
+4. SSH 到 VPS 执行那条命令
+5. 等 1 分钟，节点上线 ✅
+
+<details>
+<summary>📺 部署后你会得到什么？</summary>
+
+| 地址 | 用途 |
+|------|------|
+| `https://braum-web.xxx.pages.dev` | 公开状态页 |
+| `https://braum-web.xxx.pages.dev/admin` | 管理后台 |
+| `https://braum-worker.xxx.workers.dev/health` | API 健康检查 |
+
+</details>
+
+> 📖 完整图文教程见 [小白部署指南](docs/小白部署指南.md) · 命令行部署见 [部署运维文档](docs/部署运维文档.md)
 
 ### 本地开发
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/your-org/braum-probe.git
-cd braum-probe
-
-# 2. 安装依赖
-pnpm install
-
-# 3. 复制环境变量并编辑
-cp .env.example .env
-
-# 4. 初始化数据库 + 种子数据
-pnpm db:migrate
-pnpm db:seed
-
-# 5. 启动（API + Web 并行）
+git clone https://github.com/your-org/braum-probe.git && cd braum-probe
+pnpm install && cp .env.example .env
+pnpm db:migrate && pnpm db:seed
 pnpm dev
 ```
 
 - 前端：`http://localhost:4321`
-- 管理后台：`http://localhost:4321/admin`（默认账号 `admin@braum.local` / `admin123`）
+- 管理后台：`http://localhost:4321/admin`（`admin@braum.local` / `admin123`）
 - API：`http://localhost:8787`
 
 ### 添加第一台 VPS

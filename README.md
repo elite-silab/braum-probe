@@ -95,102 +95,88 @@
 
 Fork 仓库 → **Actions** → 启用工作流 → 左侧 **Agent Release** → **Run workflow** → 等变绿
 
-### 第三步：创建 D1 数据库
+### 第三步：创建 D1 和 KV
 
-Cloudflare 控制台 → **Storage & Databases → D1** → **Create database**
-- 名称：`braum-production`
-- 复制 **Database ID**
+Cloudflare 控制台分别创建：
 
-### 第四步：创建 KV
+| 资源 | 路径 | 名称 | 需要复制 |
+|------|------|------|----------|
+| D1 数据库 | Storage & Databases → D1 → Create | `braum-production` | Database ID |
+| KV 命名空间 | Storage & Databases → KV → Create | `braum-cache` | Namespace ID |
 
-Cloudflare 控制台 → **Storage & Databases → KV** → **Create namespace**
-- 名称：`braum-cache`
-- 复制 **Namespace ID**
+### 第四步：编辑配置
 
-### 第五步：编辑配置
-
-在 GitHub 打开 `apps/api/wrangler.toml` → 点铅笔 ✏️ → 改三处：
+GitHub 打开 `apps/api/wrangler.toml` → 点铅笔 ✏️ → 改三处：
 
 ```toml
-# 改成你的 GitHub 用户名
 AGENT_RELEASE_BASE_URL = "https://github.com/你的用户名/braum-probe/releases/latest/download"
-
-# 粘贴 D1 Database ID
-database_id = "xxxx-xxxx-xxxx"
-
-# 粘贴 KV Namespace ID
-id = "xxxx-xxxx-xxxx"
+database_id = "第三步的 D1 ID"
+id = "第三步的 KV ID"
 ```
 
 点 **Commit changes** 保存。
 
-### 第六步：部署 Worker（API）
+### 第五步：部署 API（Worker）
 
-Cloudflare → **Workers & Pages** → **Create** → **Import from Git** → 选你的 Fork 仓库
+Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填写：
 
-| 设置 | 值 |
+| 配置项 | 值 |
 |------|-----|
 | Project name | `braum-worker` |
 | Build command | `pnpm --filter @braum/shared build` |
 | Deploy command | `pnpm --filter @braum/shared build && pnpm --filter @braum/api deploy:full` |
 | Node version | `22` |
 
-部署成功后复制 Worker 地址（如 `https://braum-worker.xxx.workers.dev`）。
+点 **Save and Deploy**，部署成功后复制 Worker 地址（如 `https://braum-worker.xxx.workers.dev`）。
 
-进入 Worker **Settings → Variables and Secrets**，添加 4 个 **Secret**：
+然后进入 Worker **Settings → Variables and Secrets**，添加 4 个 Secret：
 
-| 名称 | 值 |
+| 变量 | 值 |
 |------|-----|
 | `JWT_SECRET` | 随机长字符串 |
 | `JWT_REFRESH_SECRET` | 另一个随机长字符串 |
 | `ENCRYPTION_KEY` | 再一个随机长字符串 |
 | `ADMIN_INITIAL_PASSWORD` | 你自己设的登录密码 |
 
-保存后重新 **Deploy** 一次。
+保存后再 Deploy 一次 ☕
 
-### 第七步：部署 Pages（前端）
+### 第六步：部署前端（Pages）
 
-Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
+Workers & Pages → Create → Pages → Connect to Git → 选你 Fork 的仓库，填写：
 
-| 设置 | 值 |
+| 配置项 | 值 |
 |------|-----|
 | Project name | `braum-web` |
 | Build command | `pnpm --filter @braum/shared build && pnpm --filter @braum/web build` |
-| Build output | `apps/web/dist` |
+| Build output directory | `apps/web/dist` |
 
-Pages **Settings → Variables and Secrets** 添加：
+Environment variables 添加：
 
-| 名称 | 值 |
+| 变量 | 值 |
 |------|-----|
-| `PUBLIC_API_URL` | 第六步的 Worker 地址 |
+| `PUBLIC_API_URL` | `https://braum-worker.xxx.workers.dev`（第五步的地址） |
 
-重新部署。最后回 GitHub 再编辑一次 `wrangler.toml`，补上：
+点 **Save and Deploy** ☕
+
+### 第七步：回填地址
+
+回 GitHub 再编辑 `wrangler.toml`，补上两个正式地址：
 
 ```toml
 CORS_ORIGINS = "https://braum-web.你的账号.pages.dev"
 AGENT_API_URL = "https://braum-worker.你的账号.workers.dev"
 ```
 
+Commit 后自动重新部署。
+
 ### 第八步：登录 + 安装 VPS
 
 1. 打开 `https://braum-web.你的账号.pages.dev/admin`
-2. 邮箱：`admin@braum.local`，密码：你第六步设的密码
+2. 邮箱 `admin@braum.local`，密码填第五步设的 `ADMIN_INITIAL_PASSWORD`
 3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
-4. SSH 到 VPS 执行那条命令
-5. 等 1 分钟，节点上线 ✅
+4. SSH 到 VPS 执行，等 1 分钟节点上线 ✅
 
-<details>
-<summary>📺 部署后你会得到什么？</summary>
-
-| 地址 | 用途 |
-|------|------|
-| `https://braum-web.xxx.pages.dev` | 公开状态页 |
-| `https://braum-web.xxx.pages.dev/admin` | 管理后台 |
-| `https://braum-worker.xxx.workers.dev/health` | API 健康检查 |
-
-</details>
-
-> 📖 完整图文教程见 [小白部署指南](docs/小白部署指南.md) · 命令行部署见 [部署运维文档](docs/部署运维文档.md)
+> 📖 详细图文见 [小白部署指南](docs/小白部署指南.md) · 命令行部署见 [部署运维文档](docs/部署运维文档.md)
 
 ### 本地开发
 

@@ -1,0 +1,109 @@
+---
+// Braum 布隆 CF 探针 — 全局布局
+import '../styles/global.css'
+import ThemeSwitcher from '../components/ThemeSwitcher'
+
+interface Props {
+  title?: string
+}
+
+const { title = 'Braum 布隆探针' } = Astro.props
+const currentPath = Astro.url.pathname
+
+interface NavItem {
+  href: string
+  label: string
+  icon: string
+  match: (path: string) => boolean
+}
+
+const navItems: NavItem[] = [
+  { href: '/', label: '总览', icon: '📊', match: (p) => p === '/' },
+  { href: '/map', label: '节点', icon: '🗺️', match: (p) => p.startsWith('/map') || p.startsWith('/node') },
+  { href: '/history', label: '历史', icon: '📈', match: (p) => p.startsWith('/history') },
+  { href: '/incidents', label: '公告', icon: '📢', match: (p) => p.startsWith('/incidents') },
+]
+---
+
+<!doctype html>
+<html lang="zh-CN" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Braum 布隆 CF 探针 — 轻量级全球网络监测平台" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <script is:inline>
+      // 初始化主题（避免闪烁）
+      const savedTheme = localStorage.getItem('braum-theme') || 'default'
+      const isDark = localStorage.getItem('braum-dark') === 'true'
+
+      if (savedTheme !== 'default') document.documentElement.setAttribute('data-theme', savedTheme)
+
+      // 暗色模式（星海主题强制深色）
+      if (isDark || savedTheme === 'hoshizora') document.documentElement.classList.add('dark')
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col pb-16 sm:pb-0">
+    <!-- 顶部导航 -->
+    <header class="theme-header sticky top-0 z-50 border-b">
+      <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center gap-8">
+          <a href="/" class="flex items-center gap-2 text-lg font-bold theme-text">
+            <img src="/logo-icon.svg" alt="Braum" class="h-8 w-8" />
+            Braum
+          </a>
+          <!-- 桌面端导航 -->
+          <div class="hidden items-center gap-1 sm:flex">
+            {navItems.map((item) => (
+              <a
+                href={item.href}
+                class:list={[
+                  'rounded-lg px-3 py-2 text-sm transition-colors',
+                  item.match(currentPath)
+                    ? 'theme-text font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
+                    : 'theme-text-secondary hover:opacity-80 hover:bg-slate-100 dark:hover:bg-slate-800',
+                ]}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+        <ThemeSwitcher client:load />
+      </nav>
+    </header>
+
+    <!-- 主内容 -->
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <!-- 底部 -->
+    <footer class="border-t py-8 theme-border hidden sm:block">
+      <div class="mx-auto max-w-7xl px-4 text-center text-sm sm:px-6 lg:px-8 theme-text-secondary">
+        <p>© {new Date().getFullYear()} Braum 布隆探针 · Powered by Cloudflare Workers</p>
+      </div>
+    </footer>
+
+    <!-- 移动端底部 Tab Bar -->
+    <nav class="sm:hidden fixed bottom-0 inset-x-0 z-50 theme-header border-t safe-area-bottom">
+      <div class="flex items-center justify-around h-16">
+        {navItems.map((item) => (
+          <a
+            href={item.href}
+            class:list={[
+              'flex flex-col items-center justify-center gap-0.5 px-3 py-1 text-xs transition-colors min-w-[3.5rem]',
+              item.match(currentPath)
+                ? 'text-brand-600 dark:text-brand-400 font-semibold'
+                : 'theme-text-secondary',
+            ]}
+          >
+            <span class="text-lg leading-none">{item.icon}</span>
+            <span>{item.label}</span>
+          </a>
+        ))}
+      </div>
+    </nav>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+.astro/
+
+# Wrangler
+.wrangler/
+
+# Turbo
+.turbo/
+.pnpm-store/
+
+# Testing
+coverage/
+
+# Temp
+tmp/
+
+# Logs
+*.log
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+
+const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787'
+let nodes: any[] = []
+let loadError = false
+try {
+  const response = await fetch(`${API_BASE}/api/v1/nodes?page_size=100`)
+  const payload = await response.json()
+  nodes = Array.isArray(payload?.data) ? payload.data : []
+  loadError = !response.ok || payload?.code !== 0
+} catch {
+  loadError = true
+}
+
+const regionLabels: Record<string, string> = {
+  asia: '亚洲', europe: '欧洲', north_america: '北美洲',
+  south_america: '南美洲', oceania: '大洋洲', africa: '非洲',
+}
+const locatedNodes = nodes.filter((node: any) =>
+  node.country !== '待识别'
+  && node.city !== '待识别'
+  && !(Number(node.latitude) === 0 && Number(node.longitude) === 0)
+)
+const pointStyle = (node: any) => {
+  const longitude = Math.max(-180, Math.min(180, Number(node.longitude) || 0))
+  const latitude = Math.max(-90, Math.min(90, Number(node.latitude) || 0))
+  return `left:${(longitude + 180) / 360 * 100}%;top:${(90 - latitude) / 180 * 100}%`
+}
+const nodeState = (node: any) => node.registration_status === 'pending'
+  ? { label: '等待安装', color: 'bg-slate-400', ring: 'ring-slate-300' }
+  : node.status === 'active'
+    ? { label: '在线', color: 'bg-emerald-500', ring: 'ring-emerald-300' }
+    : node.status === 'paused'
+      ? { label: '暂停', color: 'bg-amber-500', ring: 'ring-amber-300' }
+      : { label: '离线', color: 'bg-red-500', ring: 'ring-red-300' }
+---
+
+<BaseLayout title="节点分布 — Braum 探针">
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mb-8">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">Infrastructure map</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">VPS 节点分布</h1>
+      <p class="mt-2 max-w-2xl text-slate-500 dark:text-slate-400">位置由 VPS Agent 首次连接时自动识别，也可以在后台手动修正。</p>
+    </div>
+
+    {loadError && (
+      <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">暂时无法加载节点分布，请稍后刷新。</div>
+    )}
+
+    <section class="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 shadow-xl dark:border-slate-700">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4 text-white">
+        <div>
+          <h2 class="font-semibold">全球节点视图</h2>
+          <p class="mt-0.5 text-xs text-slate-400">{locatedNodes.length} 个已定位 · {nodes.length} 个节点</p>
+        </div>
+        <div class="flex gap-4 text-xs text-slate-300">
+          <span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-emerald-500"></i>在线</span>
+          <span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-red-500"></i>离线</span>
+          <span class="flex items-center gap-1.5"><i class="h-2 w-2 rounded-full bg-slate-400"></i>待安装</span>
+        </div>
+      </div>
+      <div class="relative aspect-[16/8] min-h-[320px] overflow-hidden bg-[radial-gradient(circle_at_50%_45%,#1e3a5f_0%,#0f172a_55%,#020617_100%)]">
+        <div class="absolute inset-0 opacity-30" style="background-image:linear-gradient(rgba(148,163,184,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.25) 1px,transparent 1px);background-size:10% 20%"></div>
+        <div class="absolute inset-x-[8%] top-[21%] h-[28%] rounded-[45%] border border-dashed border-slate-500/30"></div>
+        <div class="absolute left-[12%] top-[31%] h-[31%] w-[21%] rotate-[-8deg] rounded-[55%_40%_60%_35%] bg-slate-700/30"></div>
+        <div class="absolute left-[44%] top-[25%] h-[28%] w-[18%] rounded-[40%_55%_45%_60%] bg-slate-700/30"></div>
+        <div class="absolute left-[66%] top-[28%] h-[25%] w-[22%] rounded-[55%_40%_60%_35%] bg-slate-700/30"></div>
+        <div class="absolute left-[75%] top-[65%] h-[12%] w-[10%] rotate-12 rounded-[50%] bg-slate-700/30"></div>
+
+        {locatedNodes.map((node: any) => {
+          const state = nodeState(node)
+          return (
+            <a
+              href={`/node/${node.id}`}
+              class="group absolute z-10 -translate-x-1/2 -translate-y-1/2"
+              style={pointStyle(node)}
+              aria-label={`${node.name}，${state.label}`}
+            >
+              <span class={`absolute -inset-2 animate-ping rounded-full opacity-20 ${node.status === 'active' ? state.color : 'hidden'}`}></span>
+              <span class={`relative block h-3.5 w-3.5 rounded-full border-2 border-white shadow-lg ring-4 ring-opacity-30 ${state.color} ${state.ring}`}></span>
+              <span class="pointer-events-none absolute bottom-5 left-1/2 hidden w-max -translate-x-1/2 rounded-lg border border-white/10 bg-slate-950/95 px-3 py-2 text-xs text-white shadow-xl group-hover:block group-focus:block">
+                <strong class="block">{node.name}</strong>
+                <span class="mt-1 block text-slate-400">{node.city}, {node.country} · {state.label}</span>
+              </span>
+            </a>
+          )
+        })}
+      </div>
+    </section>
+
+    <section class="mt-8">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">节点目录</h2>
+        <span class="text-sm text-slate-400">按配置地区展示</span>
+      </div>
+      {nodes.length ? (
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {nodes.map((node: any) => {
+            const state = nodeState(node)
+            return (
+              <a href={`/node/${node.id}`} class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-brand-700">
+                <div class="flex items-start justify-between gap-3">
+                  <div><h3 class="font-semibold text-slate-900 dark:text-white">{node.name}</h3><p class="mt-1 text-xs text-slate-500">{node.city}, {node.country} · {regionLabels[node.region] || node.region}</p></div>
+                  <span class={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${state.color} text-white`}><i class="h-1.5 w-1.5 rounded-full bg-white"></i>{state.label}</span>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-xs dark:border-slate-800">
+                  <div><p class="font-mono font-semibold text-slate-800 dark:text-slate-100">{node.latest_metrics ? `${Number(node.latest_metrics.cpu_usage).toFixed(1)}%` : '--'}</p><p class="mt-1 text-slate-400">CPU</p></div>
+                  <div><p class="font-mono font-semibold text-slate-800 dark:text-slate-100">{node.avg_latency == null ? '--' : `${Math.round(node.avg_latency)}ms`}</p><p class="mt-1 text-slate-400">延迟</p></div>
+                  <div><p class="font-mono font-semibold text-slate-800 dark:text-slate-100">{node.uptime == null ? '--' : `${Number(node.uptime).toFixed(2)}%`}</p><p class="mt-1 text-slate-400">可用率</p></div>
+                </div>
+              </a>
+            )
+          })}
+        </div>
+      ) : (
+        <div class="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500 dark:border-slate-700">还没有可展示的 VPS 节点</div>
+      )}
+    </section>
+  </div>
+</BaseLayout>

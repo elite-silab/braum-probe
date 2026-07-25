@@ -1,0 +1,16 @@
+---
+// Braum 布隆 CF 探针 — 公告管理
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import IncidentManager from '../../components/admin/IncidentManager'
+---
+
+<AdminLayout title="公告管理 — Braum 管理后台">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">公告管理</h1>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">发布和管理系统故障公告与维护通知</p>
+    </div>
+  </div>
+
+  <IncidentManager client:load />
+</AdminLayout>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Braum Icon — 布隆探针 (64x64) -->
+  <path d="M32 4L6 16v16c0 14.4 10.24 27.84 24 32 13.76-4.16 24-17.6 24-32V16L32 4z" fill="url(#g)" opacity="0.9"/>
+  <circle cx="32" cy="32" r="12" fill="none" stroke="white" stroke-width="2.5" opacity="0.9"/>
+  <circle cx="32" cy="32" r="5" fill="white"/>
+  <path d="M18 22a18 18 0 0 1 28 0" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path d="M46 42a18 18 0 0 1-28 0" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <defs>
+    <linearGradient id="g" x1="6" y1="4" x2="58" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+</svg>

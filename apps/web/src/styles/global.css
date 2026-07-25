@@ -1,0 +1,318 @@
+@import "tailwindcss";
+@config "../../tailwind.config.mjs";
+
+@layer base {
+  /* ===== 默认主题（Braum 蓝） ===== */
+  :root {
+    --theme-primary: #3b82f6;
+    --theme-primary-light: #60a5fa;
+    --theme-primary-dark: #2563eb;
+    --theme-accent: #8b5cf6;
+
+    --color-bg: 255 255 255;
+    --color-fg: 15 23 42;
+    --color-muted: 100 116 139;
+    --color-border: 226 232 240;
+    --color-card: 255 255 255;
+
+    --surface-bg: #ffffff;
+    --surface-card: #ffffff;
+    --surface-sidebar: #ffffff;
+    --surface-header: rgba(255, 255, 255, 0.8);
+    --surface-body: #f8fafc;
+    --surface-hover: #f1f5f9;
+    --surface-active: #eff6ff;
+    --surface-active-text: #2563eb;
+    --surface-border: #e2e8f0;
+    --surface-text: #0f172a;
+    --surface-text-secondary: #64748b;
+
+    /* 二次元装饰 */
+    --theme-gradient-start: #3b82f6;
+    --theme-gradient-end: #8b5cf6;
+    --theme-glow: rgba(59, 130, 246, 0.15);
+    --theme-badge-bg: #eff6ff;
+    --theme-badge-text: #2563eb;
+    --theme-font-accent: 'Inter', system-ui, sans-serif;
+  }
+
+  .dark {
+    --surface-bg: #0f172a;
+    --surface-card: #1e293b;
+    --surface-sidebar: #1e293b;
+    --surface-header: rgba(15, 23, 42, 0.8);
+    --surface-body: #0f172a;
+    --surface-hover: #334155;
+    --surface-active: rgba(59, 130, 246, 0.1);
+    --surface-active-text: #60a5fa;
+    --surface-border: #334155;
+    --surface-text: #f1f5f9;
+    --surface-text-secondary: #94a3b8;
+    --theme-glow: rgba(59, 130, 246, 0.2);
+    --theme-badge-bg: rgba(59, 130, 246, 0.15);
+    --theme-badge-text: #93c5fd;
+  }
+
+  /* ===== 主题一：樱の物语 (Sakura Monogatari) ===== */
+  [data-theme="sakura"] {
+    --theme-primary: #ec4899;
+    --theme-primary-light: #f472b6;
+    --theme-primary-dark: #db2777;
+    --theme-accent: #f43f5e;
+
+    --surface-bg: #fff5f7;
+    --surface-card: #ffffff;
+    --surface-sidebar: #fdf2f8;
+    --surface-header: rgba(255, 245, 247, 0.85);
+    --surface-body: #fff5f7;
+    --surface-hover: #fce7f3;
+    --surface-active: #fce7f3;
+    --surface-active-text: #be185d;
+    --surface-border: #fbcfe8;
+    --surface-text: #500724;
+    --surface-text-secondary: #9d174d;
+
+    --theme-gradient-start: #ec4899;
+    --theme-gradient-end: #f43f5e;
+    --theme-glow: rgba(236, 72, 153, 0.15);
+    --theme-badge-bg: #fce7f3;
+    --theme-badge-text: #be185d;
+    --theme-font-accent: 'Noto Serif SC', 'Inter', serif;
+  }
+
+  [data-theme="sakura"].dark,
+  [data-theme="sakura"] .dark {
+    --surface-bg: #1a0612;
+    --surface-card: #2d0a1f;
+    --surface-sidebar: #2d0a1f;
+    --surface-header: rgba(26, 6, 18, 0.85);
+    --surface-body: #1a0612;
+    --surface-hover: #4a1033;
+    --surface-active: rgba(236, 72, 153, 0.15);
+    --surface-active-text: #f9a8d4;
+    --surface-border: #4a1033;
+    --surface-text: #fce7f3;
+    --surface-text-secondary: #f9a8d4;
+    --theme-glow: rgba(236, 72, 153, 0.25);
+    --theme-badge-bg: rgba(236, 72, 153, 0.15);
+    --theme-badge-text: #f9a8d4;
+  }
+
+  /* ===== 主题二：星海夜航 (Starry Night Voyage) ===== */
+  [data-theme="hoshizora"] {
+    --theme-primary: #8b5cf6;
+    --theme-primary-light: #a78bfa;
+    --theme-primary-dark: #7c3aed;
+    --theme-accent: #6366f1;
+
+    /* 星海永远是深色 */
+    --surface-bg: #0c0a1a;
+    --surface-card: #1a1333;
+    --surface-sidebar: #150f2e;
+    --surface-header: rgba(12, 10, 26, 0.85);
+    --surface-body: #0c0a1a;
+    --surface-hover: #2e2256;
+    --surface-active: rgba(139, 92, 246, 0.15);
+    --surface-active-text: #c4b5fd;
+    --surface-border: #2e2256;
+    --surface-text: #ede9fe;
+    --surface-text-secondary: #a78bfa;
+
+    --theme-gradient-start: #8b5cf6;
+    --theme-gradient-end: #6366f1;
+    --theme-glow: rgba(139, 92, 246, 0.3);
+    --theme-badge-bg: rgba(139, 92, 246, 0.15);
+    --theme-badge-text: #c4b5fd;
+    --theme-font-accent: 'Inter', system-ui, sans-serif;
+  }
+
+  [data-theme="hoshizora"].dark,
+  [data-theme="hoshizora"] .dark {
+    --surface-bg: #0c0a1a;
+    --surface-card: #1a1333;
+    --surface-sidebar: #150f2e;
+    --surface-header: rgba(12, 10, 26, 0.85);
+    --surface-body: #0c0a1a;
+    --surface-hover: #2e2256;
+    --surface-active: rgba(139, 92, 246, 0.2);
+    --surface-active-text: #ddd6fe;
+    --surface-border: #2e2256;
+    --surface-text: #ede9fe;
+    --surface-text-secondary: #a78bfa;
+    --theme-glow: rgba(139, 92, 246, 0.35);
+    --theme-badge-bg: rgba(139, 92, 246, 0.2);
+    --theme-badge-text: #ddd6fe;
+  }
+
+  /* ===== 主题三：翠灵庭院 (Emerald Spirit Garden) ===== */
+  [data-theme="suirei"] {
+    --theme-primary: #10b981;
+    --theme-primary-light: #34d399;
+    --theme-primary-dark: #059669;
+    --theme-accent: #14b8a6;
+
+    --surface-bg: #f0fdf4;
+    --surface-card: #ffffff;
+    --surface-sidebar: #ecfdf5;
+    --surface-header: rgba(240, 253, 244, 0.85);
+    --surface-body: #f0fdf4;
+    --surface-hover: #d1fae5;
+    --surface-active: #d1fae5;
+    --surface-active-text: #065f46;
+    --surface-border: #a7f3d0;
+    --surface-text: #064e3b;
+    --surface-text-secondary: #047857;
+
+    --theme-gradient-start: #10b981;
+    --theme-gradient-end: #14b8a6;
+    --theme-glow: rgba(16, 185, 129, 0.15);
+    --theme-badge-bg: #d1fae5;
+    --theme-badge-text: #065f46;
+    --theme-font-accent: 'Noto Sans SC', 'Inter', sans-serif;
+  }
+
+  [data-theme="suirei"].dark,
+  [data-theme="suirei"] .dark {
+    --surface-bg: #021a0e;
+    --surface-card: #0a2e1a;
+    --surface-sidebar: #0a2e1a;
+    --surface-header: rgba(2, 26, 14, 0.85);
+    --surface-body: #021a0e;
+    --surface-hover: #14532d;
+    --surface-active: rgba(16, 185, 129, 0.15);
+    --surface-active-text: #6ee7b7;
+    --surface-border: #14532d;
+    --surface-text: #ecfdf5;
+    --surface-text-secondary: #6ee7b7;
+    --theme-glow: rgba(16, 185, 129, 0.25);
+    --theme-badge-bg: rgba(16, 185, 129, 0.15);
+    --theme-badge-text: #6ee7b7;
+  }
+
+  /* ===== 全局基础样式 ===== */
+  body {
+    background-color: var(--surface-body);
+    color: var(--surface-text);
+    font-family: var(--theme-font-accent);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  ::selection {
+    background-color: var(--theme-primary);
+    color: white;
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--surface-card);
+    border-color: var(--surface-border);
+    color: var(--surface-text);
+    @apply rounded-xl border p-6;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* 主题感知表面 */
+  .theme-surface {
+    background-color: var(--surface-bg);
+    border-color: var(--surface-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .theme-card {
+    background-color: var(--surface-card);
+    border-color: var(--surface-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .theme-sidebar {
+    background-color: var(--surface-sidebar);
+    border-color: var(--surface-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .theme-header {
+    background-color: var(--surface-header);
+    border-color: var(--surface-border);
+    backdrop-filter: blur(12px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .theme-hover:hover {
+    background-color: var(--surface-hover);
+  }
+
+  .theme-active {
+    background-color: var(--surface-active);
+    color: var(--surface-active-text);
+  }
+
+  .theme-text {
+    color: var(--surface-text);
+  }
+
+  .theme-text-secondary {
+    color: var(--surface-text-secondary);
+  }
+
+  .theme-text-primary {
+    color: var(--theme-primary);
+  }
+
+  .theme-border {
+    border-color: var(--surface-border);
+  }
+
+  /* 主题品牌标识 */
+  .theme-brand {
+    color: var(--theme-primary);
+  }
+
+  /* 主题渐变按钮 */
+  .theme-btn-primary {
+    background-color: var(--theme-primary);
+    color: white;
+    @apply rounded-lg px-4 py-2 text-sm font-medium;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .theme-btn-primary:hover {
+    background-color: var(--theme-primary-dark);
+    box-shadow: 0 0 20px var(--theme-glow);
+  }
+
+  /* 主题发光效果 */
+  .theme-glow {
+    box-shadow: 0 0 30px var(--theme-glow);
+  }
+
+  /* 主题徽章 */
+  .theme-badge {
+    background-color: var(--theme-badge-bg);
+    color: var(--theme-badge-text);
+    @apply rounded-full px-2 py-1 text-xs font-medium;
+  }
+
+  /* 星海主题特殊星空背景 */
+  [data-theme="hoshizora"] body {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.15) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.1) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,0.12) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 100%);
+  }
+
+  /* 樱花主题装饰性背景 */
+  [data-theme="sakura"] body {
+    background-image:
+      radial-gradient(ellipse at 10% 0%, rgba(252, 231, 243, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 100%, rgba(252, 231, 243, 0.3) 0%, transparent 50%);
+  }
+
+  /* 翠灵主题装饰性背景 */
+  [data-theme="suirei"] body {
+    background-image:
+      radial-gradient(ellipse at 10% 0%, rgba(209, 250, 229, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 100%, rgba(209, 250, 229, 0.3) 0%, transparent 50%);
+  }
+}

@@ -1,0 +1,139 @@
+---
+// Braum 布隆 CF 探针 — 公告详情页
+import BaseLayout from '../../layouts/BaseLayout.astro'
+
+const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:8787'
+const { id } = Astro.params
+
+let incident: any = null
+let updates: any[] = []
+
+if (id) {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/incidents/${id}`)
+    const data = await res.json()
+    if (data?.data) {
+      incident = data.data
+      updates = incident.updates || []
+      delete incident.updates
+    }
+  } catch { incident = null }
+}
+
+const statusLabels: Record<string, string> = {
+  investigating: '调查中',
+  identified: '已确认',
+  monitoring: '观察中',
+  resolved: '已解决',
+}
+
+const statusColors: Record<string, string> = {
+  investigating: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  identified: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  monitoring: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  resolved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+}
+
+const severityLabels: Record<string, string> = {
+  info: '信息',
+  warning: '警告',
+  critical: '严重',
+}
+
+const severityColors: Record<string, string> = {
+  info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+}
+---
+
+<BaseLayout title={`${incident?.title || '公告'} — Braum 探针`}>
+  <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+    <!-- 面包屑 -->
+    <nav class="mb-6 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+      <a href="/" class="hover:text-slate-900 dark:hover:text-white">总览</a>
+      <span>/</span>
+      <a href="/incidents" class="hover:text-slate-900 dark:hover:text-white">公告</a>
+      <span>/</span>
+      <span class="text-slate-900 dark:text-white">{incident?.title || `公告 ${id}`}</span>
+    </nav>
+
+    {incident ? (
+      <>
+        <!-- 公告头部 -->
+        <div class="card mb-6">
+          <div class="flex items-start justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{incident.title}</h1>
+              <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                创建于 {new Date(incident.created_at).toLocaleString('zh-CN')}
+                {incident.updated_at && incident.updated_at !== incident.created_at && (
+                  <span> · 更新于 {new Date(incident.updated_at).toLocaleString('zh-CN')}</span>
+                )}
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <span class={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[incident.status] || ''}`}>
+                {statusLabels[incident.status] || incident.status}
+              </span>
+              <span class={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${severityColors[incident.severity] || ''}`}>
+                {severityLabels[incident.severity] || incident.severity}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 描述 -->
+        {incident.description && (
+          <div class="card mb-6">
+            <h2 class="mb-3 text-lg font-semibold text-slate-900 dark:text-white">详情</h2>
+            <p class="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              {incident.description}
+            </p>
+          </div>
+        )}
+
+        <!-- 时间线更新 -->
+        <div class="card">
+          <h2 class="mb-4 text-lg font-semibold text-slate-900 dark:text-white">更新时间线</h2>
+          {updates.length > 0 ? (
+            <div class="space-y-4">
+              {updates.map((update: any) => (
+                <div class="border-l-2 border-brand-300 pl-4 dark:border-brand-700">
+                  <div class="flex items-center gap-2">
+                    {update.status && (
+                      <span class={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[update.status] || ''}`}>
+                        {statusLabels[update.status] || update.status}
+                      </span>
+                    )}
+                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                      {new Date(update.created_at).toLocaleString('zh-CN')}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">{update.message}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-slate-400 dark:text-slate-500">暂无更新记录</p>
+          )}
+
+          {incident.resolved_at && (
+            <div class="mt-6 rounded-lg bg-emerald-50 p-4 dark:bg-emerald-900/20">
+              <p class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                此事件已于 {new Date(incident.resolved_at).toLocaleString('zh-CN')} 解决
+              </p>
+            </div>
+          )}
+        </div>
+      </>
+    ) : (
+      <div class="card text-center">
+        <p class="text-slate-500 dark:text-slate-400">公告不存在或无法访问</p>
+        <a href="/incidents" class="mt-4 inline-block text-brand-600 hover:text-brand-700 dark:text-brand-400">
+          返回公告列表
+        </a>
+      </div>
+    )}
+  </div>
+</BaseLayout>

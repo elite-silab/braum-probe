@@ -5,14 +5,13 @@
 <h1 align="center">Braum 布隆探针</h1>
 
 <p align="center">
-  <strong>Cloudflare 原生 · 零服务器成本 · 全球 VPS 监控与网络探测平台</strong>
+  <strong>Cloudflare 原生 · 无需额外控制面服务器 · 轻量 VPS 监控与网络探测</strong>
 </p>
 
 <p align="center">
   <a href="#-快速开始">快速开始</a> •
-  <a href="https://github.com/your-org/braum-probe/wiki">文档</a> •
-  <a href="#-截图预览">截图</a> •
-  <a href="#-对比">对比</a>
+  <a href="#-文档">文档</a> •
+  <a href="#-截图">截图</a>
 </p>
 
 <p align="center">
@@ -27,31 +26,25 @@
 
 ## ✨ 为什么选择 Braum？
 
-| 特性 | Braum | 哪吒探针 | Komari | Uptime Kuma |
-|:---|:---:|:---:|:---:|:---:|
-| **控制面需要服务器** | ❌ 不需要 | ✅ 需要 | ✅ 需要 | ✅ 需要 |
-| **部署成本** | $0 (CF 免费版) | VPS 费用 | VPS 费用 | VPS 费用 |
-| **边缘计算** | ✅ Cloudflare 全球节点 | ❌ 单点 | ❌ 单点 | ❌ 单点 |
-| **Agent 入站端口** | 0 个（Agent 主动外连） | 需要 | 需要 | 不需要 |
-| **HTTP/DNS 本地探测** | ✅ 由 VPS Agent 执行 | ❌ 控制面发起 | ❌ 控制面发起 | ✅ 控制面发起 |
-| **告警通知** | ✅ Telegram + Webhook | ✅ 多渠道 | ✅ 邮件/Webhook | ✅ 90+ 渠道 |
-| **主题系统** | 4 套 + Dark 模式 | 社区主题 | 可自定义 | 默认主题 |
-| **管理后台** | ✅ 内置 RBAC | ✅ 内置 | ✅ 内置 | ✅ 内置 |
-| **数据保留** | D1 自动清理 | 手动管理 | 手动管理 | SQLite |
+- **无需额外控制面 VPS**：API、数据库、缓存和前端分别运行在 Workers、D1、KV 和 Pages 上
+- **Agent 主动外连**：被监控 VPS 仅通过出站 HTTPS 上报，不需要开放 Agent 入站端口
+- **节点本地探测**：HTTP 和 DNS 任务由各 VPS 就近执行，便于观察不同地区的网络质量
+- **添加节点简单**：后台只需填写节点名称，即可生成一次性安装命令
+- **轻量易维护**：单文件 Go Agent、自动数据库迁移、数据定期清理
 
-> **核心差异**：其他探针都需要一台 VPS 运行控制面。Braum 的控制面完全运行在 Cloudflare 边缘网络上——D1 数据库、KV 缓存、Workers API、Pages 前端——全部免费。你只需要为被监控的 VPS 安装 Agent。
+> Braum 将控制面放在 Cloudflare 上，无需再准备一台 VPS 托管管理后台。轻量规模通常可以使用 Cloudflare 免费额度；被监控 VPS 的费用及超出免费额度后的 Cloudflare 用量不包含在内。
 
 ## 🚀 特性一览
 
-- 🖥️ **VPS 资源监控** — CPU、内存、Swap、磁盘、负载、流量、连接数，Agent 每秒主动上报
+- 🖥️ **VPS 资源监控** — CPU、内存、Swap、磁盘、负载、流量、连接数，Agent 默认每 60 秒主动上报
 - 🔍 **节点本地探测** — HTTP/DNS 任务由 VPS Agent 就近执行，真实反映各地网络质量
-- 🔐 **安全注册** — 一次性 15 分钟安装令牌，D1 只存 SHA-256 摘要，密钥永不落盘
-- 📊 **状态总览** — 在线状态、资源趋势、延迟热力图、可用率指标
+- 🔐 **安全注册** — 一次性安装令牌 15 分钟有效；D1 仅存密钥摘要，Agent 密钥保存在 VPS 的 `0600` 配置文件中
+- 📊 **状态总览** — 在线状态、资源趋势、延迟趋势、可用率指标
 - 🔔 **智能告警** — CPU/内存/磁盘/负载/心跳/延迟/可用率/连续失败，Telegram + Webhook 通知
 - 📢 **故障公告** — 维护计划、事件时间线、公开状态页
 - 👥 **权限审计** — Owner/Admin/Viewer 三级权限，敏感字段自动脱敏
 - 🎨 **四套主题** — 默认 / 樱の物语 / 星海夜航 / 翠灵庭院，独立 Dark 模式开关
-- ☁️ **Cloudflare 原生** — Workers + D1 + KV + Pages，零服务器运维，全球边缘加速
+- ☁️ **Cloudflare 原生** — Workers + D1 + KV + Pages，无需自管控制面服务器，全球边缘加速
 
 ## 📸 截图
 
@@ -85,7 +78,7 @@
 
 ## 🚀 快速开始
 
-> **你需要**：一个 Cloudflare 账号（免费）+ 一台 VPS。不需要域名，Cloudflare 会给你免费的 `workers.dev` 和 `pages.dev` 地址。
+> **你需要**：一个 Cloudflare 账号 + 一台被监控的 VPS。不需要域名，Cloudflare 会提供 `workers.dev` 和 `pages.dev` 地址；轻量使用可以从免费额度开始。
 
 ### 第一步：Fork 仓库
 
@@ -124,8 +117,8 @@ Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填�
 |------|-----|
 | Project name | `braum-worker` |
 | Build command | `pnpm --filter @braum/shared build` |
-| Deploy command | `pnpm --filter @braum/shared build && pnpm --filter @braum/api deploy:full` |
-| Node version | `22` |
+| Deploy command | `pnpm --filter @braum/api deploy:full` |
+| Node version | `22.12.0` 或更新的 22.x |
 
 点 **Save and Deploy**，部署成功后复制 Worker 地址（如 `https://braum-worker.xxx.workers.dev`）。
 
@@ -160,18 +153,18 @@ Environment variables 添加：
 
 ### 第七步：回填地址
 
-回 GitHub 再编辑 `wrangler.toml`，补上两个正式地址：
+回 GitHub 再编辑 `apps/api/wrangler.toml`，把 Cloudflare 实际生成的两个地址粘贴到引号内。下面的域名只是格式示例，请勿照抄：
 
 ```toml
-CORS_ORIGINS = "https://braum-web.你的账号.pages.dev"
-AGENT_API_URL = "https://braum-worker.你的账号.workers.dev"
+CORS_ORIGINS = "https://your-project.pages.dev"
+AGENT_API_URL = "https://your-worker.your-subdomain.workers.dev"
 ```
 
 Commit 后自动重新部署。
 
 ### 第八步：登录 + 安装 VPS
 
-1. 打开 `https://braum-web.你的账号.pages.dev/admin`
+1. 打开第六步复制的 Pages 地址，在末尾加上 `/admin`
 2. 邮箱 `admin@braum.local`，密码填第五步设的 `ADMIN_INITIAL_PASSWORD`
 3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
 4. SSH 到 VPS 执行，等 1 分钟节点上线 ✅
@@ -181,7 +174,7 @@ Commit 后自动重新部署。
 ### 本地开发
 
 ```bash
-git clone https://github.com/your-org/braum-probe.git && cd braum-probe
+git clone https://github.com/elite-silab/braum-probe.git && cd braum-probe
 pnpm install && cp .env.example .env
 pnpm db:migrate && pnpm db:seed
 pnpm dev
@@ -203,18 +196,18 @@ pnpm dev
 ```
 apps/
 ├── api/          # Cloudflare Worker / Hono 控制面
+│   └── migrations/ # D1 数据库迁移脚本
 ├── agent/        # Go VPS Agent（轻量常驻进程）
 └── web/          # Astro + React 状态页与管理后台
 packages/
 └── shared/       # TypeScript 跨层共享类型
 docs/             # 架构、部署、交互与数据库文档
-migrations/       # D1 数据库迁移脚本
 ```
 
 ## 🔒 安全
 
 - **RBAC 权限**：Owner / Admin / Viewer，每次请求从 D1 读取角色状态
-- **Agent 密钥**：D1 仅存 SHA-256 摘要，密钥只返回一次
+- **Agent 密钥**：D1 仅存 SHA-256 摘要；密钥只返回一次，并以 `0600` 权限保存在 VPS 配置文件中
 - **通知加密**：渠道配置 AES-GCM 加密，审计日志递归脱敏
 - **SSRF 防护**：HTTP 目标保存前执行私网/回环地址检查
 - **建议**：管理后台额外使用 Cloudflare Access 保护
@@ -234,7 +227,7 @@ migrations/       # D1 数据库迁移脚本
 ## 🧪 质量
 
 ```bash
-pnpm test        # Vitest 107 个用例 + Go Agent 测试
+pnpm test        # TypeScript / Workers 测试 + Go Agent 测试
 pnpm typecheck   # TypeScript 类型检查
 pnpm lint        # ESLint + go vet
 pnpm build       # 全量构建

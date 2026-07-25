@@ -71,10 +71,7 @@ pnpm install
 cp .env.example .env
 # 编辑 .env 填入本地配置
 
-# 初始化数据库
-pnpm db:migrate
-
-# 启动开发服务器（API + Web 并行）
+# 自动初始化数据库并启动开发服务器（API + Web 并行）
 pnpm dev
 ```
 

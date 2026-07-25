@@ -176,9 +176,10 @@ Commit 后自动重新部署。
 ```bash
 git clone https://github.com/你的用户名/braum-probe.git && cd braum-probe
 pnpm install && cp .env.example .env
-pnpm db:migrate
 pnpm dev
 ```
+
+`pnpm dev` 会在启动前自动完成本地数据库迁移。
 
 - 前端：`http://localhost:4321`
 - 管理后台：`http://localhost:4321/admin`（邮箱 `admin@braum.local`，密码为 `.env` 中的 `ADMIN_INITIAL_PASSWORD`）

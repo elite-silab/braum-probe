@@ -24,8 +24,8 @@ jobs:
       run:
         working-directory: apps/agent
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: apps/agent/go.mod
@@ -41,7 +41,7 @@ jobs:
           VERSION="${RELEASE_TAG#v}"
           go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "braum-agent_linux_${GOARCH}" ./cmd/braum-agent
           sha256sum "braum-agent_linux_${GOARCH}" > "braum-agent_linux_${GOARCH}.sha256"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: agent-linux-${{ matrix.arch }}
           path: |
@@ -52,12 +52,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           pattern: agent-linux-*
           merge-multiple: true
           path: dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           files: dist/*

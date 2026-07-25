@@ -174,7 +174,7 @@ Commit 后自动重新部署。
 ### 本地开发
 
 ```bash
-git clone https://github.com/elite-silab/braum-probe.git && cd braum-probe
+git clone https://github.com/你的用户名/braum-probe.git && cd braum-probe
 pnpm install && cp .env.example .env
 pnpm db:migrate
 pnpm dev

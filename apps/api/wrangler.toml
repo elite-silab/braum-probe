@@ -13,8 +13,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 APP_VERSION = "0.1.0"
-CORS_ORIGINS = "http://localhost:4321,https://replace-with-pages-domain.example.com"
-AGENT_API_URL = "https://api.replace-with-your-domain.example.com"
+CORS_ORIGINS = "https://braum-web.pages.dev"
+AGENT_API_URL = "https://braum-worker.codeelite.workers.dev"
 AGENT_RELEASE_BASE_URL = "https://github.com/elite-silab/braum-probe/releases/latest/download"
 
 # D1 数据库绑定

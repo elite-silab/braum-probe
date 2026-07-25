@@ -73,7 +73,6 @@ cp .env.example .env
 
 # 初始化数据库
 pnpm db:migrate
-pnpm db:seed
 
 # 启动开发服务器（API + Web 并行）
 pnpm dev

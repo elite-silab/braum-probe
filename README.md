@@ -176,12 +176,12 @@ Commit 后自动重新部署。
 ```bash
 git clone https://github.com/elite-silab/braum-probe.git && cd braum-probe
 pnpm install && cp .env.example .env
-pnpm db:migrate && pnpm db:seed
+pnpm db:migrate
 pnpm dev
 ```
 
 - 前端：`http://localhost:4321`
-- 管理后台：`http://localhost:4321/admin`（`admin@braum.local` / `admin123`）
+- 管理后台：`http://localhost:4321/admin`（邮箱 `admin@braum.local`，密码为 `.env` 中的 `ADMIN_INITIAL_PASSWORD`）
 - API：`http://localhost:8787`
 
 ### 添加第一台 VPS

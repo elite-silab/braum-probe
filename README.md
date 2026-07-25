@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="#-快速开始">快速开始</a> •
+  <a href="#-技术栈">技术栈</a> •
   <a href="#-文档">文档</a> •
   <a href="#-截图">截图</a>
 </p>
@@ -19,7 +20,7 @@
   <img src="https://img.shields.io/badge/Agent-Go-00ADD8?logo=go&logoColor=white" alt="Go Agent" />
   <img src="https://img.shields.io/badge/Frontend-Astro-BC52EE?logo=astro&logoColor=white" alt="Astro" />
   <img src="https://img.shields.io/badge/Database-D1-0052CC?logo=sqlite&logoColor=white" alt="D1" />
-  <img src="https://img.shields.io/badge/Test-162%20passed-brightgreen?logo=vitest&logoColor=white" alt="Tests" />
+  <a href="https://github.com/elite-silab/braum-probe/actions/workflows/ci.yml"><img src="https://github.com/elite-silab/braum-probe/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
 </p>
 
@@ -50,7 +51,7 @@
 
 | 前端首页 | 管理后台 |
 |:---:|:---:|
-| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/admin-dashboard.png) |
+| ![Braum 状态总览](docs/screenshots/dashboard.png) | ![Braum 管理后台](docs/screenshots/admin-dashboard.png) |
 
 ## 🏗️ 架构
 
@@ -75,6 +76,17 @@
 
 - **控制面**（Cloudflare）：无需服务器，Workers 处理 API、D1 存数据、KV 做缓存、Pages 托管前端
 - **Agent**（VPS 上）：Go 编写的轻量常驻进程，仅出站 HTTPS，不开入站端口
+
+## 🛠️ 技术栈
+
+| 层级 | 技术 | 作用 |
+|:---|:---|:---|
+| 控制面 | **Cloudflare Workers + Hono** | API、鉴权、节点管理与告警 |
+| 数据库 | **Cloudflare D1** | 节点、指标、探测、审计数据 |
+| 缓存 | **Cloudflare KV** | 配置和热点数据缓存 |
+| 前端 | **Astro + React + Tailwind CSS** | 状态页与管理后台 |
+| Agent | **Go** | VPS 资源采集和节点本地探测 |
+| 共享类型 | **pnpm workspace** | API 与前端之间的 TypeScript 类型契约 |
 
 ## 🚀 快速开始
 
@@ -113,6 +125,8 @@ id = "第三步的 KV ID"
 
 Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填写：
 
+> 这里要创建 **Worker** 项目。如果页面要求填写 `Build output directory`、没有 `Deploy command`，说明进入了 Pages 流程，请返回后选择 Workers/Worker。
+
 | 配置项 | 值 |
 |------|-----|
 | Project name | `braum-worker` |
@@ -136,6 +150,8 @@ Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填�
 ### 第六步：部署前端（Pages）
 
 Workers & Pages → Create → Pages → Connect to Git → 选你 Fork 的仓库，填写：
+
+> 这里要选择 **Pages → Connect to Git**。如果页面出现 Worker 的 `Deploy command` 或 D1/KV 绑定设置，说明选错了创建入口。
 
 | 配置项 | 值 |
 |------|-----|
@@ -169,17 +185,25 @@ Commit 后自动重新部署。
 3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
 4. SSH 到 VPS 执行，等 1 分钟节点上线 ✅
 
+### ✅ 部署完成检查
+
+- Worker 的 `/health` 返回正常状态；
+- Pages 首页可以打开，浏览器没有“网络请求失败”；
+- `/admin` 可以使用初始密码登录；
+- 后台可以生成一次性 Agent 安装命令；
+- VPS 安装后约 1 分钟内变为在线，并开始出现资源和探测数据。
+
 > 📖 详细图文见 [小白部署指南](docs/小白部署指南.md) · 命令行部署见 [部署运维文档](docs/部署运维文档.md)
 
 ### 本地开发
 
 ```bash
-git clone https://github.com/你的用户名/braum-probe.git && cd braum-probe
+git clone https://github.com/elite-silab/braum-probe.git && cd braum-probe
 pnpm install && cp .env.example .env
 pnpm dev
 ```
 
-`.env.example` 提供可直接运行的本地默认值；需要自定义时直接编辑生成的 `.env`。上面的复制命令只需在首次安装时执行，已有 `.env` 时不要重复执行，以免覆盖自己的配置。`pnpm dev` 会自动执行本地 D1 migration，不需要单独运行数据库命令。
+`.env.example` 提供可直接运行的本地默认值；需要自定义时直接编辑生成的 `.env`。复制命令只需在首次安装时执行，已有 `.env` 时不要重复执行，以免覆盖自己的配置。`pnpm dev` 会自动执行本地 D1 migration，不需要单独运行数据库命令。
 
 - 前端：`http://localhost:4321`
 - 管理后台：`http://localhost:4321/admin`（邮箱 `admin@braum.local`，密码为 `.env` 中的 `ADMIN_INITIAL_PASSWORD`）

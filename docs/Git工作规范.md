@@ -9,11 +9,9 @@
 项目采用单一 monorepo，Workers 后端、前端展示页、管理后台、D1 数据库迁移、部署配置和文档统一版本管理：
 
 ```text
-apps/web/              # 前端展示页面（Next.js / Astro，部署到 Cloudflare Pages）
-apps/admin/            # 管理后台（Next.js，部署到 Cloudflare Pages）
-apps/api/       # Cloudflare Workers 后端（探针引擎 + API）
+apps/web/              # Astro SSR 前端与管理后台（部署到 Cloudflare Web Worker）
+apps/api/              # Cloudflare Workers 后端（探针引擎 + API）
 apps/api/migrations/   # Cloudflare D1 迁移脚本
-deploy/                # Wrangler 配置、Cloudflare Access 策略
 docs/                  # 产品和工程文档
 ```
 
@@ -217,12 +215,12 @@ tmp/
 - [ ] 写接口考虑鉴权、幂等、限流、审计日志和 KV 缓存失效。
 - [ ] Cron Trigger 处理逻辑有超时保护和错误兜底。
 
-### 前端（Pages）
+### 前端（Web Worker）
 
 - [ ] lint、类型检查、单元测试和生产构建通过。
 - [ ] 页面元数据、键盘操作、焦点状态、错误/空/加载状态完整。
 - [ ] UI 变化附桌面和移动端截图。
-- [ ] `_headers` 和 `_redirects` 配置与 API 路由保持一致。
+- [ ] Astro SSR 构建、Worker 部署和 API 地址配置保持一致。
 
 ### D1 与部署
 
@@ -235,9 +233,9 @@ tmp/
 ## 10. Release 与 hotfix
 
 - 合并 `main` 后由 CI 执行检查、类型检查和构建；Cloudflare Git 集成负责部署。
-- 生产发布由 Cloudflare Workers/Pages 的 Git 集成执行 D1 migration、Workers deploy 和 Pages deploy。
+- 生产发布由 Cloudflare Workers Git 集成执行 API/Web Worker 部署和 D1 migration。
 - hotfix 从当前生产标签创建，合并回 `main` 后正常发布，不维护独立长期分支。
-- Workers 回滚使用 `wrangler versions rollback`，秒级全球生效；Pages 回滚通过 Dashboard 或 API 恢复到上一部署。
+- API 与 Web Worker 回滚均使用对应 Worker 的 `wrangler versions rollback`，秒级全球生效。
 - D1 回滚优先使用 Time Travel（30 天），避免执行高风险 down migration。
 
 ## 11. 当前项目初始化

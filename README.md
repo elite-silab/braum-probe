@@ -27,7 +27,7 @@
 
 ## ✨ 为什么选择 Braum？
 
-- **无需额外控制面 VPS**：API、数据库、缓存和前端分别运行在 Workers、D1、KV 和 Pages 上
+- **无需额外控制面 VPS**：API、SSR 前端、数据库和缓存分别运行在 Workers、D1 和 KV 上
 - **Agent 主动外连**：被监控 VPS 仅通过出站 HTTPS 上报，不需要开放 Agent 入站端口
 - **节点本地探测**：HTTP 和 DNS 任务由各 VPS 就近执行，便于观察不同地区的网络质量
 - **添加节点简单**：后台只需填写节点名称，即可生成一次性安装命令
@@ -45,7 +45,7 @@
 - 📢 **故障公告** — 维护计划、事件时间线、公开状态页
 - 👥 **权限审计** — Owner/Admin/Viewer 三级权限，敏感字段自动脱敏
 - 🎨 **四套主题** — 默认 / 樱の物语 / 星海夜航 / 翠灵庭院，独立 Dark 模式开关
-- ☁️ **Cloudflare 原生** — Workers + D1 + KV + Pages，无需自管控制面服务器，全球边缘加速
+- ☁️ **Cloudflare 原生** — API 与 Web 均运行在 Workers，配合 D1 + KV，无需自管控制面服务器
 
 ## 📸 截图
 
@@ -56,25 +56,23 @@
 ## 🏗️ 架构
 
 ```text
-                        ┌──────────────────────────┐
- 浏览器 ── Pages ──────▶│ Cloudflare Worker / Hono │
-                        │ 鉴权 · 配置 · 告警 · API │
-                        └────────────┬─────────────┘
-                                     │
-                              ┌──────┴──────┐
-                              │ D1      KV  │
-                              └─────────────┘
-                                     ▲
-             HTTPS 主动上报/配置下发 │
-            ┌────────────────────────┼──────────────────────┐
-      ┌─────┴─────┐            ┌─────┴─────┐          ┌─────┴─────┐
-      │ VPS Agent │            │ VPS Agent │          │ VPS Agent │
-      │ 东京      │            │ 法兰克福  │          │ 洛杉矶    │
-      └─────┬─────┘            └─────┬─────┘          └─────┬─────┘
-            └──────── HTTP / DNS 节点本地探测 ──────────────┘
+ 浏览器 ─────▶ Web Worker / Astro SSR
+                       │ HTTPS API
+                       ▼
+              API Worker / Hono
+              鉴权 · 配置 · 告警
+                       │
+                 ┌─────┴─────┐
+                 │ D1     KV │
+                 └─────┬─────┘
+                       ▲
+      HTTPS 主动上报   │
+  ┌────────────────────┼────────────────────┐
+  │ VPS Agent 东京     │ VPS Agent 法兰克福 │ VPS Agent 洛杉矶
+  └────────────── HTTP / DNS 节点本地探测 ──┘
 ```
 
-- **控制面**（Cloudflare）：无需服务器，Workers 处理 API、D1 存数据、KV 做缓存、Pages 托管前端
+- **控制面**（Cloudflare）：API Worker 处理数据与鉴权，Web Worker 运行 Astro SSR，D1 存数据，KV 做缓存
 - **Agent**（VPS 上）：Go 编写的轻量常驻进程，仅出站 HTTPS，不开入站端口
 
 ## 🛠️ 技术栈
@@ -84,13 +82,13 @@
 | 控制面 | **Cloudflare Workers + Hono** | API、鉴权、节点管理与告警 |
 | 数据库 | **Cloudflare D1** | 节点、指标、探测、审计数据 |
 | 缓存 | **Cloudflare KV** | 配置和热点数据缓存 |
-| 前端 | **Astro + React + Tailwind CSS** | 状态页与管理后台 |
+| 前端 | **Astro SSR + React + Tailwind CSS** | Web Worker 上的状态页与管理后台 |
 | Agent | **Go** | VPS 资源采集和节点本地探测 |
 | 共享类型 | **pnpm workspace** | API 与前端之间的 TypeScript 类型契约 |
 
 ## 🚀 快速开始
 
-> **你需要**：一个 Cloudflare 账号 + 一台被监控的 VPS。不需要域名，Cloudflare 会提供 `workers.dev` 和 `pages.dev` 地址；轻量使用可以从免费额度开始。
+> **你需要**：一个 Cloudflare 账号 + 一台被监控的 VPS。不需要域名，Cloudflare 会提供免费的 `workers.dev` 地址；轻量使用可以从免费额度开始。
 
 ### 第一步：Fork 仓库
 
@@ -147,40 +145,41 @@ Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填�
 
 保存后再 Deploy 一次 ☕
 
-### 第六步：部署前端（Pages）
+### 第六步：部署前端（Web Worker）
 
-Workers & Pages → Create → Pages → Connect to Git → 选你 Fork 的仓库，填写：
+再次进入 Workers & Pages → Create → Import from Git → 选择同一个仓库，填写：
 
-> 这里要选择 **Pages → Connect to Git**。如果页面出现 Worker 的 `Deploy command` 或 D1/KV 绑定设置，说明选错了创建入口。
+> 前端使用 Astro SSR，必须创建 **Worker** 项目，不要选择 Pages，也不要填写 `Build output directory`。
 
 | 配置项 | 值 |
 |------|-----|
 | Project name | `braum-web` |
 | Build command | `pnpm --filter @braum/shared build && pnpm --filter @braum/web build` |
-| Build output directory | `apps/web/dist` |
+| Deploy command | `pnpm --filter @braum/web run deploy:worker` |
+| Node version | `22.12.0` 或更新的 22.x |
 
-Environment variables 添加：
+在 Web Worker 的构建变量中添加：
 
 | 变量 | 值 |
 |------|-----|
 | `PUBLIC_API_URL` | `https://braum-worker.xxx.workers.dev`（第五步的地址） |
 
-点 **Save and Deploy** ☕
+保存后重新部署，成功后复制 Web Worker 实际生成的 `workers.dev` 地址。
 
 ### 第七步：回填地址
 
 回 GitHub 再编辑 `apps/api/wrangler.toml`，把 Cloudflare 实际生成的两个地址粘贴到引号内。下面的域名只是格式示例，请勿照抄：
 
 ```toml
-CORS_ORIGINS = "https://your-project.pages.dev"
-AGENT_API_URL = "https://your-worker.your-subdomain.workers.dev"
+CORS_ORIGINS = "https://braum-web.your-subdomain.workers.dev"
+AGENT_API_URL = "https://braum-worker.your-subdomain.workers.dev"
 ```
 
 Commit 后自动重新部署。
 
 ### 第八步：登录 + 安装 VPS
 
-1. 打开第六步复制的 Pages 地址，在末尾加上 `/admin`
+1. 打开第六步复制的 Web Worker 地址，在末尾加上 `/admin`
 2. 邮箱 `admin@braum.local`，密码填第五步设的 `ADMIN_INITIAL_PASSWORD`
 3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
 4. SSH 到 VPS 执行，等 1 分钟节点上线 ✅
@@ -188,7 +187,7 @@ Commit 后自动重新部署。
 ### ✅ 部署完成检查
 
 - Worker 的 `/health` 返回正常状态；
-- Pages 首页可以打开，浏览器没有“网络请求失败”；
+- Web Worker 首页可以打开，浏览器没有“网络请求失败”；
 - `/admin` 可以使用初始密码登录；
 - 后台可以生成一次性 Agent 安装命令；
 - VPS 安装后约 1 分钟内变为在线，并开始出现资源和探测数据。

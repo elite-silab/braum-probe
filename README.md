@@ -24,9 +24,6 @@
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/dashboard.png" width="700" alt="Braum Dashboard" />
-</p>
 
 ## ✨ 为什么选择 Braum？
 
@@ -58,9 +55,9 @@
 
 ## 📸 截图
 
-| 状态页 | 管理后台 |
+| 前端首页 | 管理后台 |
 |:---:|:---:|
-| [![Dashboard](docs/screenshots/dashboard.png)](docs/screenshots/dashboard.png) | [![Admin](docs/screenshots/admin-dashboard.png)](docs/screenshots/admin-dashboard.png) |
+| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/admin-dashboard.png) |
 
 ## 🏗️ 架构
 

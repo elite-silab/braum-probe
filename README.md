@@ -1,4 +1,205 @@
 <p align="center">
+  <img src="apps/web/public/logo-icon.svg" width="80" alt="Braum" />
+</p>
+
+<h1 align="center">Braum 布隆探针</h1>
+
+<p align="center">
+  <strong>Cloudflare 原生 · 零服务器成本 · 全球 VPS 监控与网络探测平台</strong>
+</p>
+
+<p align="center">
+  <a href="#-快速开始">快速开始</a> •
+  <a href="https://github.com/your-org/braum-probe/wiki">文档</a> •
+  <a href="#-截图预览">截图</a> •
+  <a href="#-对比">对比</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
+  <img src="https://img.shields.io/badge/Agent-Go-00ADD8?logo=go&logoColor=white" alt="Go Agent" />
+  <img src="https://img.shields.io/badge/Frontend-Astro-BC52EE?logo=astro&logoColor=white" alt="Astro" />
+  <img src="https://img.shields.io/badge/Database-D1-0052CC?logo=sqlite&logoColor=white" alt="D1" />
+  <img src="https://img.shields.io/badge/Test-162%20passed-brightgreen?logo=vitest&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="700" alt="Braum Dashboard" />
+</p>
+
+## ✨ 为什么选择 Braum？
+
+| 特性 | Braum | 哪吒探针 | Komari | Uptime Kuma |
+|:---|:---:|:---:|:---:|:---:|
+| **控制面需要服务器** | ❌ 不需要 | ✅ 需要 | ✅ 需要 | ✅ 需要 |
+| **部署成本** | $0 (CF 免费版) | VPS 费用 | VPS 费用 | VPS 费用 |
+| **边缘计算** | ✅ Cloudflare 全球节点 | ❌ 单点 | ❌ 单点 | ❌ 单点 |
+| **Agent 入站端口** | 0 个（Agent 主动外连） | 需要 | 需要 | 不需要 |
+| **HTTP/DNS 本地探测** | ✅ 由 VPS Agent 执行 | ❌ 控制面发起 | ❌ 控制面发起 | ✅ 控制面发起 |
+| **告警通知** | ✅ Telegram + Webhook | ✅ 多渠道 | ✅ 邮件/Webhook | ✅ 90+ 渠道 |
+| **主题系统** | 4 套 + Dark 模式 | 社区主题 | 可自定义 | 默认主题 |
+| **管理后台** | ✅ 内置 RBAC | ✅ 内置 | ✅ 内置 | ✅ 内置 |
+| **数据保留** | D1 自动清理 | 手动管理 | 手动管理 | SQLite |
+
+> **核心差异**：其他探针都需要一台 VPS 运行控制面。Braum 的控制面完全运行在 Cloudflare 边缘网络上——D1 数据库、KV 缓存、Workers API、Pages 前端——全部免费。你只需要为被监控的 VPS 安装 Agent。
+
+## 🚀 特性一览
+
+- 🖥️ **VPS 资源监控** — CPU、内存、Swap、磁盘、负载、流量、连接数，Agent 每秒主动上报
+- 🔍 **节点本地探测** — HTTP/DNS 任务由 VPS Agent 就近执行，真实反映各地网络质量
+- 🔐 **安全注册** — 一次性 15 分钟安装令牌，D1 只存 SHA-256 摘要，密钥永不落盘
+- 📊 **状态总览** — 在线状态、资源趋势、延迟热力图、可用率指标
+- 🔔 **智能告警** — CPU/内存/磁盘/负载/心跳/延迟/可用率/连续失败，Telegram + Webhook 通知
+- 📢 **故障公告** — 维护计划、事件时间线、公开状态页
+- 👥 **权限审计** — Owner/Admin/Viewer 三级权限，敏感字段自动脱敏
+- 🎨 **四套主题** — 默认 / 樱の物语 / 星海夜航 / 翠灵庭院，独立 Dark 模式开关
+- ☁️ **Cloudflare 原生** — Workers + D1 + KV + Pages，零服务器运维，全球边缘加速
+
+## 📸 截图预览
+
+<p align="center">
+  <b>状态总览</b><br/>
+  <a href="docs/screenshots/dashboard.png"><img src="docs/screenshots/dashboard.png" width="400" alt="Dashboard" /></a>
+  <a href="docs/screenshots/admin-nodes.png"><img src="docs/screenshots/admin-nodes.png" width="400" alt="Node Management" /></a>
+</p>
+
+<p align="center">
+  <b>管理后台</b><br/>
+  <a href="docs/screenshots/admin-dashboard.png"><img src="docs/screenshots/admin-dashboard.png" width="400" alt="Admin Dashboard" /></a>
+  <a href="docs/screenshots/admin-nodes.png"><img src="docs/screenshots/admin-nodes.png" width="400" alt="Node List" /></a>
+</p>
+
+## 🏗️ 架构
+
+```text
+                        ┌──────────────────────────┐
+ 浏览器 ── Pages ──────▶│ Cloudflare Worker / Hono │
+                        │ 鉴权 · 配置 · 告警 · API │
+                        └────────────┬─────────────┘
+                                     │
+                              ┌──────┴──────┐
+                              │ D1      KV  │
+                              └─────────────┘
+                                     ▲
+             HTTPS 主动上报/配置下发 │
+            ┌────────────────────────┼──────────────────────┐
+      ┌─────┴─────┐            ┌─────┴─────┐          ┌─────┴─────┐
+      │ VPS Agent │            │ VPS Agent │          │ VPS Agent │
+      │ 东京      │            │ 法兰克福  │          │ 洛杉矶    │
+      └─────┬─────┘            └─────┬─────┘          └─────┬─────┘
+            └──────── HTTP / DNS 节点本地探测 ──────────────┘
+```
+
+- **控制面**（Cloudflare）：无需服务器，Workers 处理 API、D1 存数据、KV 做缓存、Pages 托管前端
+- **Agent**（VPS 上）：Go 编写的轻量常驻进程，仅出站 HTTPS，不开入站端口
+
+## 🚀 快速开始
+
+### 30 秒了解 Braum
+
+1. Fork 本仓库 → 在 Cloudflare 控制台创建 D1 + KV + Worker + Pages
+2. 编辑 `apps/api/wrangler.toml` 填入资源 ID
+3. 在 Cloudflare 控制台设置 4 个密钥 → GitHub Actions 一键部署
+
+详细步骤见 [部署指南](docs/部署运维文档.md)。
+
+### 本地开发
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/your-org/braum-probe.git
+cd braum-probe
+
+# 2. 安装依赖
+pnpm install
+
+# 3. 复制环境变量并编辑
+cp .env.example .env
+
+# 4. 初始化数据库 + 种子数据
+pnpm db:migrate
+pnpm db:seed
+
+# 5. 启动（API + Web 并行）
+pnpm dev
+```
+
+- 前端：`http://localhost:4321`
+- 管理后台：`http://localhost:4321/admin`（默认账号 `admin@braum.local` / `admin123`）
+- API：`http://localhost:8787`
+
+### 添加第一台 VPS
+
+1. 登录 `/admin` → 「VPS 节点」→ 点击「添加节点」
+2. 只需填写名称，系统自动生成一次性安装命令
+3. 在目标 VPS 上执行安装命令（自动识别架构、校验 SHA-256、创建沙箱服务）
+4. 等待 ~1 分钟，节点自动上线
+
+## 📦 项目结构
+
+```
+apps/
+├── api/          # Cloudflare Worker / Hono 控制面
+├── agent/        # Go VPS Agent（轻量常驻进程）
+└── web/          # Astro + React 状态页与管理后台
+packages/
+└── shared/       # TypeScript 跨层共享类型
+docs/             # 架构、部署、交互与数据库文档
+migrations/       # D1 数据库迁移脚本
+```
+
+## 🔒 安全
+
+- **RBAC 权限**：Owner / Admin / Viewer，每次请求从 D1 读取角色状态
+- **Agent 密钥**：D1 仅存 SHA-256 摘要，密钥只返回一次
+- **通知加密**：渠道配置 AES-GCM 加密，审计日志递归脱敏
+- **SSRF 防护**：HTTP 目标保存前执行私网/回环地址检查
+- **建议**：管理后台额外使用 Cloudflare Access 保护
+
+## 📖 文档
+
+| 文档 | 说明 |
+|:---|:---|
+| [部署指南](docs/部署运维文档.md) | 生产环境部署全流程 |
+| [架构设计](docs/架构设计文档.md) | 系统架构与 ADR |
+| [数据库设计](docs/数据库设计文档.md) | D1 Schema 与迁移 |
+| [前端功能](docs/前端功能和交互设计文档.md) | 状态页功能与交互 |
+| [管理后台](docs/管理后台功能和设计文档.md) | 后台功能与设计 |
+| [UI 规范](docs/UI视觉与交互规范文档.md) | 主题系统与组件规范 |
+| [环境变量](docs/环境变量与配置指南.md) | 配置项说明 |
+
+## 🧪 质量
+
+```bash
+pnpm test        # Vitest 107 个用例 + Go Agent 测试
+pnpm typecheck   # TypeScript 类型检查
+pnpm lint        # ESLint + go vet
+pnpm build       # 全量构建
+```
+
+## 🤝 参与贡献
+
+欢迎 Issue 和 Pull Request！在提交 PR 前请确保：
+
+- `pnpm test` 全部通过
+- 新功能附带对应测试用例（项目遵循 TDD）
+- 代码风格与现有项目一致
+
+## 📄 协议
+
+[MIT](LICENSE) — 自由使用、修改和分发。
+
+## ⭐ Star History
+
+如果你喜欢这个项目，请给一个 Star 支持！
+
+---
+
+<p align="center">
+  <sub>Built with ❤️ on Cloudflare Workers</sub>
+</p>
+<p align="center">
   <img src="apps/web/public/logo-icon.svg" width="72" alt="Braum" />
 </p>
 <h1 align="center">Braum 布隆探针</h1>

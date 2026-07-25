@@ -179,7 +179,7 @@ pnpm install && cp .env.example .env
 pnpm dev
 ```
 
-`pnpm dev` 会在启动前自动完成本地数据库迁移。
+`.env.example` 提供可直接运行的本地默认值；需要自定义时直接编辑生成的 `.env`。上面的复制命令只需在首次安装时执行，已有 `.env` 时不要重复执行，以免覆盖自己的配置。`pnpm dev` 会自动执行本地 D1 migration，不需要单独运行数据库命令。
 
 - 前端：`http://localhost:4321`
 - 管理后台：`http://localhost:4321/admin`（邮箱 `admin@braum.local`，密码为 `.env` 中的 `ADMIN_INITIAL_PASSWORD`）

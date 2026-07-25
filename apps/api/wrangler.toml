@@ -21,13 +21,13 @@ AGENT_RELEASE_BASE_URL = "https://github.com/elite-silab/braum-probe/releases/la
 [[d1_databases]]
 binding = "DB"
 database_name = "braum-production"
-database_id = "<replace-with-production-d1-id>"
+database_id = "e29b2f97-aab9-4b97-976c-469076528cf9"
 migrations_dir = "migrations"
 
 # KV 命名空间绑定
 [[kv_namespaces]]
 binding = "CACHE"
-id = "<replace-with-production-kv-id>"
+id = "f0557966b8904cbba7c1fa32817df690"
 
 # Cron 触发器
 [triggers]

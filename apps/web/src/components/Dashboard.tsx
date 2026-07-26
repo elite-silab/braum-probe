@@ -31,6 +31,10 @@ interface NodeData {
     disk_used_bytes: number
     disk_total_bytes: number
     load_1: number
+    network_rx_bytes: number
+    network_tx_bytes: number
+    tcp_connections: number
+    uptime_seconds: number
     collected_at: string
   } | null
 }

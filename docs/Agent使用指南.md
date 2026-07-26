@@ -14,7 +14,7 @@ Braum Agent 安装在被监控的 VPS 上，负责采集服务器资源，并从
 - VPS 可以通过 HTTPS 访问 Worker 和 GitHub Release；
 - 当前账号可以使用 `sudo`，或已经是 root。
 
-安装脚本会自动识别架构、下载对应二进制、校验 SHA-256，并创建低权限的 `braum-agent` 系统用户。
+安装脚本会自动识别架构、下载对应二进制、校验 SHA-256，创建低权限的 `braum-agent` 系统用户，并安装数字菜单管理工具 `braum-agentctl`。
 
 ## 2. 安装第一台 VPS
 
@@ -32,14 +32,51 @@ Braum Agent 安装在被监控的 VPS 上，负责采集服务器资源，并从
 看到下面的输出表示安装程序已经完成：
 
 ```text
-Braum Agent installed and started. Check status with: systemctl status braum-agent
+Braum Agent installed and started. Manage it with: sudo braum-agentctl
 ```
 
-## 3. 确认运行状态
+## 3. 使用数字菜单管理 Agent
+
+安装完成后，只需要记住一个命令：
+
+```bash
+sudo braum-agentctl
+```
+
+输入菜单前面的数字即可执行操作：
+
+```text
+1. 查看服务状态
+2. 查看实时日志
+3. 查看最近日志
+4. 查看版本与安全配置
+5. 启动 Agent
+6. 重启 Agent
+7. 停止 Agent
+8. 在线更新 Agent
+9. 卸载 Agent
+0. 退出
+```
+
+「版本与安全配置」只展示 Worker 地址、节点 ID、采集间隔、文件权限和凭据是否存在，不显示 `agent_secret` 或注册令牌。「卸载 Agent」必须再次输入 `YES`，避免误操作。
+
+### 给已经安装 Agent 的旧节点补装菜单
+
+新安装的节点会自动拥有管理菜单。旧节点不必重新注册，也不会轮换节点密钥；只需把下面地址换成自己的 Worker 地址后执行一次：
+
+```bash
+curl --proto '=https' --tlsv1.2 -fsSL 'https://你的Worker地址/api/agent/v1/manage.sh' | sudo bash
+```
+
+看到 `管理脚本已安装：sudo braum-agentctl` 后，即可使用数字菜单。
+
+## 4. 确认运行状态
 
 优先查看管理后台。节点显示在线、最近心跳持续更新并出现 CPU/内存数据，即代表完整上报链路正常。
 
-需要在 VPS 排查时，可以逐条执行：
+需要在 VPS 排查时，运行 `sudo braum-agentctl`，选择「1. 查看服务状态」或「3. 查看最近日志」。选择「2. 查看实时日志」后，按 `Ctrl+C` 返回菜单。
+
+下面的原生命令仅供熟悉 systemd 的开发者排障，普通用户不需要记忆：
 
 ```bash
 sudo systemctl status braum-agent --no-pager
@@ -55,7 +92,7 @@ sudo journalctl -u braum-agent -f
 
 正常运行时服务状态为 `active (running)`。Agent 默认至少每 60 秒上报一次，失败后会自动退避重试，网络恢复后无需手动重启。
 
-## 4. Agent 会上报什么
+## 5. Agent 会上报什么
 
 Agent 上报：
 
@@ -68,7 +105,9 @@ Agent 上报：
 
 Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密钥。
 
-## 5. 添加 HTTP/DNS 探测
+管理页面会把累计收发字节展示为本次开机以来的下载、上传和总流量，并根据相邻两次采集的差值计算上下行速率。VPS 重启后 Linux 网络计数器和运行时间会重新从零开始，这不是数据丢失。
+
+## 6. 添加 HTTP/DNS 探测
 
 服务器资源监控安装后立即生效，网络探测是可选功能。节点在线但「探测历史」为空，通常只是尚未分配目标。
 
@@ -79,11 +118,12 @@ Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密
 
 暂停节点后，Agent 仍会上报资源与心跳，但 Worker 不再向它下发探测目标。
 
-## 6. 文件与服务位置
+## 7. 文件与服务位置
 
 | 内容 | 位置 |
 |---|---|
 | Agent 程序 | `/usr/local/bin/braum-agent` |
+| 数字菜单 | `/usr/local/bin/braum-agentctl` |
 | 配置文件 | `/etc/braum-agent/config.json` |
 | systemd 服务 | `/etc/systemd/system/braum-agent.service` |
 | 运行用户 | `braum-agent` |
@@ -102,9 +142,19 @@ Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密
 
 不要把一台 VPS 的配置复制到另一台，也不要手动修改 `node_id` 或 `agent_secret`。后台设置的采集周期最小为 60 秒。
 
-## 7. 升级或重装
+## 8. 在线更新或重新安装
 
-推荐使用后台重新安装，步骤与首次安装一致：
+日常升级优先运行 `sudo braum-agentctl`，选择「8. 在线更新 Agent」。管理脚本会：
+
+1. 自动识别 amd64 或 arm64；
+2. 通过 HTTPS 下载最新版 Agent 和 `.sha256`；
+3. 校验成功后原子替换程序并重启服务；
+4. 启动失败时自动恢复旧版本；
+5. 同步最新版管理脚本。
+
+在线更新不会修改 `/etc/braum-agent/config.json`，因此节点 ID 和长期密钥都会保留，不需要在后台重新生成安装命令。
+
+只有长期密钥需要轮换、配置损坏或 Agent 无法正常注册时，才需要从后台重新安装，步骤与首次安装一致：
 
 1. 先确认 GitHub Release 中已经发布所需版本的 amd64/arm64 文件及 `.sha256`。
 2. 在节点管理中重新生成安装命令。
@@ -116,7 +166,7 @@ Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密
 
 如果安装命令已经超过 15 分钟或曾经成功使用，请回到后台重新生成，不要反复执行旧命令。
 
-## 8. 暂停、吊销、卸载和删除
+## 9. 暂停、吊销、卸载和删除
 
 这些操作含义不同：
 
@@ -127,20 +177,11 @@ Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密
 | 卸载 Agent | 删除 VPS 上的程序和配置，不删除后台节点 |
 | 删除节点 | 删除后台节点以及关联的 Agent、指标和探测数据 |
 
-在 VPS 卸载：
-
-```bash
-sudo systemctl disable --now braum-agent
-sudo rm -f /etc/systemd/system/braum-agent.service
-sudo systemctl daemon-reload
-sudo rm -f /usr/local/bin/braum-agent
-sudo rm -rf /etc/braum-agent
-sudo userdel braum-agent
-```
+在 VPS 运行 `sudo braum-agentctl`，选择「9. 卸载 Agent」，阅读提示后输入 `YES`。菜单会停止服务并删除 Agent 程序、管理脚本、配置和系统用户。
 
 卸载后，再按需要在管理后台吊销凭据或删除节点。
 
-## 9. 常见问题
+## 10. 常见问题
 
 ### 下载失败或提示 404
 
@@ -160,7 +201,7 @@ sudo userdel braum-agent
 
 ### 服务启动失败
 
-先查看：
+先运行 `sudo braum-agentctl`，选择「1. 查看服务状态」和「3. 查看最近日志」。开发者也可以直接查看：
 
 ```bash
 sudo systemctl status braum-agent --no-pager
@@ -177,11 +218,19 @@ sudo journalctl -u braum-agent -n 100 --no-pager
 
 确认 VPS 的出站 TCP 443、DNS 和系统时间正常。Agent 会自动重试；持续失败时从日志中查找 `heartbeat failed` 后面的 HTTP 状态或网络错误。
 
+### 提示 `braum-agentctl: command not found`
+
+这是升级前安装的旧节点。按照「给已经安装 Agent 的旧节点补装菜单」执行一次补装命令，不需要重新添加节点或重新注册。
+
+### 在线更新失败
+
+管理脚本会在下载、SHA-256 校验或新版本启动失败时保留或恢复原 Agent。选择「3. 查看最近日志」确认原因，并检查 VPS 能否通过 HTTPS 访问 Worker 和 GitHub Release。
+
 ### 自动识别的位置不准确
 
 位置来自 Cloudflare 看到的出口网络，代理或特殊路由可能影响结果。可以在后台节点的高级设置中手动修正。
 
-## 10. 安全注意事项
+## 11. 安全注意事项
 
 - 所有生产通信必须使用 HTTPS；只有本地开发允许 localhost HTTP。
 - 不公开安装命令、注册令牌或 `/etc/braum-agent/config.json`。
@@ -189,9 +238,10 @@ sudo journalctl -u braum-agent -n 100 --no-pager
 - 长期密钥可能泄漏时，立即在后台吊销凭据并重新安装。
 - D1 只保存注册令牌和长期密钥的 SHA-256 摘要，不能反推出明文。
 - Agent 使用无登录 Shell 的低权限用户运行，并启用 systemd 沙箱限制。
+- 在线更新强制校验 TLS 和 SHA-256，失败时不会继续替换；配置摘要永不显示节点密钥。
 - Agent 不开放入站端口；防火墙只需允许必要的出站 HTTPS 和 DNS。
 
-## 11. 开发与发布
+## 12. 开发与发布
 
 开发者可以在仓库中测试和构建：
 
@@ -209,6 +259,7 @@ Agent 使用以下同源接口：
 | 接口 | 作用 | 凭据 |
 |---|---|---|
 | `GET /api/agent/v1/install.sh` | 获取安装脚本 | 无 |
+| `GET /api/agent/v1/manage.sh` | 获取数字菜单管理脚本 | 无 |
 | `POST /api/agent/v1/enroll` | 一次性注册 | 注册令牌 |
 | `POST /api/agent/v1/heartbeat` | 上报系统与资源、获取目标 | 节点长期密钥 |
 | `POST /api/agent/v1/probe-results` | 上报 HTTP/DNS 结果 | 节点长期密钥 |

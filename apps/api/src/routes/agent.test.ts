@@ -204,6 +204,18 @@ describe('VPS Agent registration and reporting', () => {
     expect(script).toContain('User=braum-agent')
   })
 
+  it('提供无需登录的 Agent 数字菜单管理脚本', async () => {
+    const apps = setup()
+    const response = await apps.agent(new Request('https://api.example.com/api/agent/v1/manage.sh'))
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toContain('text/x-shellscript')
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    const script = await response.text()
+    expect(script).toContain('Braum Agent 管理菜单')
+    expect(script).toContain('https://downloads.example.com')
+    expect(script).toContain('sha256sum -c')
+  })
+
   it('一次性令牌注册后不可重复使用，且数据库不保存明文密钥', async () => {
     const apps = setup()
     const credentials = await enroll(apps)

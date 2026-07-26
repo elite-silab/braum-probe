@@ -1,4 +1,5 @@
 // Braum 布隆 CF 探针 — VPS 节点状态卡片
+import { formatBytes, formatDuration } from '@braum/shared'
 
 interface Metrics {
   cpu_usage: number
@@ -7,6 +8,10 @@ interface Metrics {
   disk_used_bytes: number
   disk_total_bytes: number
   load_1: number
+  network_rx_bytes: number
+  network_tx_bytes: number
+  tcp_connections: number
+  uptime_seconds: number
   collected_at: string
 }
 
@@ -136,6 +141,14 @@ export default function NodeCard(props: NodeCardProps) {
         </div>
       )}
 
+      {metrics && (
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50/90 p-3 dark:bg-slate-800/60">
+          <CompactMetric label="↓ 累计下载" value={formatBytes(metrics.network_rx_bytes)} />
+          <CompactMetric label="↑ 累计上传" value={formatBytes(metrics.network_tx_bytes)} />
+          <CompactMetric label="运行时间" value={formatDuration(metrics.uptime_seconds)} />
+        </div>
+      )}
+
       <div className="mt-5 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
         <div>
           <p className="font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">{props.avgLatency == null ? '--' : `${Math.round(props.avgLatency)}ms`}</p>
@@ -157,5 +170,14 @@ export default function NodeCard(props: NodeCardProps) {
         <span>{props.agentVersion ? `Agent ${props.agentVersion}` : '查看详情 →'}</span>
       </div>
     </a>
+  )
+}
+
+function CompactMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0" title={`${label}：${value}`}>
+      <p className="truncate font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{value}</p>
+      <p className="mt-0.5 truncate text-[10px] text-slate-400">{label}</p>
+    </div>
   )
 }

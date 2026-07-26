@@ -13,7 +13,7 @@ import {
   hashAgentToken,
 } from '../utils/agent-auth'
 import { badRequest, success, unauthorized } from '../utils/response'
-import { createLinuxInstallScript } from '../utils/install-script'
+import { createLinuxInstallScript, createLinuxManageScript } from '../utils/install-script'
 import { writeAuditLog } from '../utils/audit'
 
 export const agentRoutes = new Hono<{ Bindings: Env }>()
@@ -96,6 +96,23 @@ agentRoutes.get('/install.sh', (c) => {
   c.header('Cache-Control', 'public, max-age=300')
   c.header('X-Content-Type-Options', 'nosniff')
   return c.body(createLinuxInstallScript(releaseUrl.toString()))
+})
+
+agentRoutes.get('/manage.sh', (c) => {
+  let releaseUrl: URL
+  try {
+    releaseUrl = new URL(c.env.AGENT_RELEASE_BASE_URL)
+  } catch {
+    return c.text('Agent release URL is not configured.\n', 503)
+  }
+  if (releaseUrl.protocol !== 'https:' || releaseUrl.hostname.includes('replace-with')) {
+    return c.text('Agent release URL is not configured.\n', 503)
+  }
+
+  c.header('Content-Type', 'text/x-shellscript; charset=utf-8')
+  c.header('Cache-Control', 'public, max-age=300')
+  c.header('X-Content-Type-Options', 'nosniff')
+  return c.body(createLinuxManageScript(releaseUrl.toString()))
 })
 
 function validText(value: unknown, max = 200): value is string {

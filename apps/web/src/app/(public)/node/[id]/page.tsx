@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import {
+  calculateNetworkRateSeries,
+  formatBytes,
+  formatDuration,
+  formatTransferRate,
+} from '@braum/shared'
 import StatusDot from '../../../../components/StatusDot'
 import { fetchApi } from '../../../../lib/server-api'
 
@@ -30,6 +36,15 @@ export default async function NodePage({ params }: { params: Promise<{ id: strin
   const diskPercent = latestMetrics ? percent(latestMetrics.disk_used_bytes, latestMetrics.disk_total_bytes) : 0
   const cpuPoints = seriesPoints(metricsHistory.map((item) => Number(item.cpu_usage) || 0))
   const memoryPoints = seriesPoints(metricsHistory.map((item) => percent(Number(item.memory_used_bytes), Number(item.memory_total_bytes))))
+  const networkRates = calculateNetworkRateSeries(metricsHistory.map(item => ({
+    network_rx_bytes: Number(item.network_rx_bytes) || 0,
+    network_tx_bytes: Number(item.network_tx_bytes) || 0,
+    collected_at: String(item.collected_at || ''),
+  })))
+  const latestNetworkRate = networkRates.length > 0 ? networkRates[networkRates.length - 1] : null
+  const networkMax = Math.max(1, ...networkRates.flatMap(point => [point.rx_bytes_per_second, point.tx_bytes_per_second]))
+  const networkRxPoints = seriesPoints(networkRates.map(point => point.rx_bytes_per_second), networkMax)
+  const networkTxPoints = seriesPoints(networkRates.map(point => point.tx_bytes_per_second), networkMax)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -53,9 +68,27 @@ export default async function NodePage({ params }: { params: Promise<{ id: strin
         </div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-10 text-center dark:border-slate-700 dark:bg-slate-900/70"><p className="font-medium text-slate-700 dark:text-slate-200">还没有收到资源指标</p><p className="mt-1 text-sm text-slate-500">请在管理后台为该节点生成安装命令，并在 VPS 上启动 Agent。</p></div>}
       </section>
 
+      {latestMetrics && <section className="card mb-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">网络与运行</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">网速按最近两次采集的流量差计算；累计流量为本次开机以来的数据。</p></div>
+          <span className="text-xs text-slate-400">约每 {node.probe_interval || 60} 秒更新</span>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatMetric label="实时网速" value={`↓ ${formatTransferRate(latestNetworkRate?.rx_bytes_per_second)}`} detail={`↑ ${formatTransferRate(latestNetworkRate?.tx_bytes_per_second)}`} />
+          <StatMetric label="累计总流量" value={formatBytes(Number(latestMetrics.network_rx_bytes) + Number(latestMetrics.network_tx_bytes))} detail={`↓ ${formatBytes(Number(latestMetrics.network_rx_bytes))} · ↑ ${formatBytes(Number(latestMetrics.network_tx_bytes))}`} />
+          <StatMetric label="网络连接" value={`${Number(latestMetrics.tcp_connections) || 0} TCP`} detail={`${Number(latestMetrics.process_count) || 0} 个进程`} />
+          <StatMetric label="运行时间" value={formatDuration(Number(latestMetrics.uptime_seconds))} detail="本次开机" />
+        </div>
+        {networkRates.length > 1 && <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">24 小时网速趋势</h3><div className="flex gap-4 text-xs text-slate-500"><Legend color="bg-sky-500" label="下载" /><Legend color="bg-violet-500" label="上传" /></div></div>
+          <svg viewBox="0 0 600 100" className="mt-4 h-36 w-full" preserveAspectRatio="none" role="img" aria-label="24 小时下载和上传速度趋势"><line x1="0" y1="97" x2="600" y2="97" stroke="currentColor" className="text-slate-200 dark:text-slate-700" /><line x1="0" y1="50" x2="600" y2="50" stroke="currentColor" strokeDasharray="4 6" className="text-slate-200 dark:text-slate-700" /><polyline points={networkRxPoints} fill="none" stroke="#0ea5e9" strokeWidth="2" vectorEffect="non-scaling-stroke" /><polyline points={networkTxPoints} fill="none" stroke="#8b5cf6" strokeWidth="2" vectorEffect="non-scaling-stroke" /></svg>
+          <div className="mt-2 flex justify-between text-[11px] text-slate-400"><span>24 小时前</span><span>峰值 {formatTransferRate(networkMax)}</span><span>现在</span></div>
+        </div>}
+      </section>}
+
       {metricsHistory.length > 1 && <div className="card mb-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-slate-900 dark:text-white">24 小时资源趋势</h2><div className="flex gap-4 text-xs text-slate-500"><Legend color="bg-brand-500" label="CPU" /><Legend color="bg-emerald-500" label="内存" /></div></div><svg viewBox="0 0 600 100" className="mt-5 h-36 w-full" preserveAspectRatio="none" role="img" aria-label="CPU 和内存使用率趋势"><line x1="0" y1="97" x2="600" y2="97" stroke="currentColor" className="text-slate-200 dark:text-slate-700" /><line x1="0" y1="50" x2="600" y2="50" stroke="currentColor" strokeDasharray="4 6" className="text-slate-200 dark:text-slate-700" /><polyline points={cpuPoints} fill="none" stroke="#3b82f6" strokeWidth="2" vectorEffect="non-scaling-stroke" /><polyline points={memoryPoints} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" /></svg></div>}
 
-      {agent?.registration_status === 'registered' && <div className="card mb-6"><h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">主机信息</h2><dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4"><Description label="系统" value={[agent.platform || agent.os, agent.arch].filter(Boolean).join(' · ')} /><Description label="内核" value={agent.kernel_version || '--'} mono /><Description label="处理器" value={agent.cpu_model || '--'} /><Description label="运行时间" value={latestMetrics ? `${Math.floor(latestMetrics.uptime_seconds / 86400)} 天` : '--'} /></dl></div>}
+      {agent?.registration_status === 'registered' && <div className="card mb-6"><h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">主机信息</h2><dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4"><Description label="系统" value={[agent.platform || agent.os, agent.arch].filter(Boolean).join(' · ')} /><Description label="内核" value={agent.kernel_version || '--'} mono /><Description label="处理器" value={agent.cpu_model || '--'} /><Description label="虚拟化" value={agent.virtualization || '未识别'} /></dl></div>}
 
       <div className="card mb-6"><h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">最近探测</h2>{probeResults.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"><tr>{['目标', '状态', '延迟', 'HTTP Code', '时间'].map((label) => <th key={label} className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-700">{probeResults.slice(0, 20).map((probe) => <tr key={probe.id || `${probe.target_id}-${probe.probe_at}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50"><td className="px-4 py-3 text-slate-700 dark:text-slate-300">{probe.target_name || probe.target_id?.slice(0, 8) || '--'}</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${probe.success ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{probe.success ? '成功' : '失败'}</span></td><td className="px-4 py-3 text-slate-700 dark:text-slate-300">{probe.latency_ms ? `${probe.latency_ms}ms` : '--'}</td><td className="px-4 py-3 text-slate-500 dark:text-slate-400">{probe.status_code || '--'}</td><td className="px-4 py-3 text-slate-500 dark:text-slate-400">{probe.probe_at ? formatDate(probe.probe_at) : '--'}</td></tr>)}</tbody></table></div> : <p className="text-center text-slate-400 dark:text-slate-500">暂无探测数据</p>}</div>
 
@@ -77,6 +110,10 @@ function ResourceMetric({ label, value, percentage, detail }: { label: string; v
   return <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-700 dark:bg-slate-900"><p className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p><p className="mt-2 font-mono text-2xl font-bold text-slate-950 dark:text-white">{value}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"><div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }} /></div><p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400">{detail}</p></div>
 }
 
+function StatMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-5 dark:border-slate-700 dark:bg-slate-800/40"><p className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p><p className="mt-2 truncate font-mono text-xl font-bold text-slate-950 dark:text-white" title={value}>{value}</p><p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400" title={detail}>{detail}</p></div>
+}
+
 function AvailabilityRow({ label, text, pct }: { label: string; text: string; pct: number }) {
   return <div><div className="flex justify-between text-sm"><span className="text-slate-500 dark:text-slate-400">{label}</span><span className="font-medium text-slate-900 dark:text-white">{text}</span></div><div className="mt-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700"><div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} /></div></div>
 }
@@ -96,14 +133,6 @@ function calculateAvailability(windows: any, results: any[]) {
 
 function percent(used: number, total: number) { return total > 0 ? Math.min(100, Math.max(0, used / total * 100)) : 0 }
 function formatDate(value: string) { return new Date(value).toLocaleString('zh-CN') }
-function formatBytes(value: number) {
-  if (!Number.isFinite(value)) return '--'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = value
-  let unit = 0
-  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit++ }
-  return `${size.toFixed(unit >= 3 ? 1 : 0)} ${units[unit]}`
-}
 function seriesPoints(values: number[], max = 100) {
   return values.map((value, index) => `${values.length <= 1 ? 0 : index / (values.length - 1) * 600},${100 - Math.min(max, Math.max(0, value)) / max * 94 - 3}`).join(' ')
 }

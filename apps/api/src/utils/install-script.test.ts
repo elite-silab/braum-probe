@@ -11,6 +11,8 @@ describe('Linux Agent installer', () => {
     expect(script).toContain('NoNewPrivileges=true')
     expect(script).toContain('ProtectSystem=strict')
     expect(script).toContain('chmod 0600 /etc/braum-agent/config.json')
+    expect(script).toContain('systemctl enable braum-agent')
+    expect(script).toContain('systemctl restart braum-agent')
     expect(script).not.toContain('set -x')
     expect(() => execFileSync('bash', ['-n'], { input: script })).not.toThrow()
   })

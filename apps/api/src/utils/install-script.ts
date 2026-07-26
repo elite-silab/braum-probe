@@ -100,7 +100,8 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now braum-agent
-echo "Braum Agent installed. Check status with: systemctl status braum-agent"
+systemctl enable braum-agent
+systemctl restart braum-agent
+echo "Braum Agent installed and started. Check status with: systemctl status braum-agent"
 `
 }

@@ -113,7 +113,9 @@ export async function verifyToken(
 }
 
 const PASSWORD_HASH_ALGORITHM = 'pbkdf2-sha256'
-const PASSWORD_HASH_ITERATIONS = 210_000
+// Cloudflare Workers Web Crypto currently rejects PBKDF2 counts above 100,000.
+const PASSWORD_HASH_ITERATIONS = 100_000
+const PASSWORD_HASH_MAX_SUPPORTED_ITERATIONS = 100_000
 
 async function derivePasswordHash(password: string, saltHex: string, iterations: number): Promise<string> {
   const keyMaterial = await crypto.subtle.importKey(
@@ -159,6 +161,13 @@ export function needsPasswordRehash(stored: string): boolean {
   return algorithm !== PASSWORD_HASH_ALGORITHM || Number(iterations) < PASSWORD_HASH_ITERATIONS
 }
 
+/** 标记由其他运行时生成、但 Cloudflare Workers 无法计算的 PBKDF2 哈希。 */
+export function isPasswordHashUnsupported(stored: string): boolean {
+  const [algorithm, iterations] = stored.split('$')
+  return algorithm === PASSWORD_HASH_ALGORITHM
+    && Number(iterations) > PASSWORD_HASH_MAX_SUPPORTED_ITERATIONS
+}
+
 /** 验证 PBKDF2 哈希，并兼容历史 salt$sha256 格式。 */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split('$')
@@ -168,6 +177,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
     const salt = parts[2]
     const expectedHash = parts[3]
     if (!Number.isInteger(iterations) || iterations < 1 || !salt || !expectedHash) return false
+    if (iterations > PASSWORD_HASH_MAX_SUPPORTED_ITERATIONS) return false
 
     const hash = await derivePasswordHash(password, salt, iterations)
     return equalHex(hash, expectedHash)

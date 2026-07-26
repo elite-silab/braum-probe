@@ -1,7 +1,14 @@
 // Braum 布隆 CF 探针 — JWT 工具函数测试
 
 import { describe, it, expect } from 'vitest'
-import { signToken, verifyToken, hashPassword, needsPasswordRehash, verifyPassword } from './jwt'
+import {
+  signToken,
+  verifyToken,
+  hashPassword,
+  isPasswordHashUnsupported,
+  needsPasswordRehash,
+  verifyPassword,
+} from './jwt'
 
 const SECRET = 'test-jwt-secret-key-for-unit-tests'
 
@@ -90,10 +97,16 @@ describe('hashPassword + verifyPassword', () => {
     const hash = await hashPassword('test')
     const [algorithm, iterations, salt, hashPart] = hash.split('$')
     expect(algorithm).toBe('pbkdf2-sha256')
-    expect(Number(iterations)).toBeGreaterThanOrEqual(200_000)
+    expect(Number(iterations)).toBe(100_000)
     expect(salt).toMatch(/^[0-9a-f]{32}$/) // 16 bytes = 32 hex chars
     expect(hashPart).toMatch(/^[0-9a-f]{64}$/)
     expect(needsPasswordRehash(hash)).toBe(false)
+  })
+
+  it('拒绝超过 Cloudflare Workers 上限的 PBKDF2 哈希且不调用计算', async () => {
+    const unsupported = `pbkdf2-sha256$210000$${'00'.repeat(16)}$${'00'.repeat(32)}`
+    expect(isPasswordHashUnsupported(unsupported)).toBe(true)
+    expect(await verifyPassword('password', unsupported)).toBe(false)
   })
 
   it('兼容旧 salt$sha256 格式并标记为需要升级', async () => {

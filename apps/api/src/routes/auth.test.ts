@@ -195,6 +195,54 @@ describe('POST /api/v1/auth/login', () => {
     expect(body.message).toContain('JWT Secret')
   })
 
+  it('管理员可用初始密码迁移 Workers 不支持的旧 PBKDF2 哈希', async () => {
+    const unsupportedHash = `pbkdf2-sha256$210000$${'00'.repeat(16)}$${'00'.repeat(32)}`
+    const user = {
+      id: 'admin-1',
+      email: 'admin@braum.local',
+      name: 'Admin',
+      password_hash: unsupportedHash,
+      role: 'owner',
+      status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const app = createApp({ ...ENV_BASE, DB: db })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@braum.local', password: 'admin123' }),
+    }))
+
+    expect(res.status).toBe(200)
+    const recoverySql = db.prepare.mock.calls
+      .map((call: string[]) => call[0])
+      .find((sql: string) => sql === 'UPDATE users SET password_hash = ? WHERE id = ?')
+    expect(recoverySql).toBeDefined()
+    expect(user.password_hash).not.toBe(unsupportedHash)
+  })
+
+  it('不支持的旧哈希不能被错误的初始密码绕过', async () => {
+    const user = {
+      id: 'admin-1',
+      email: 'admin@braum.local',
+      name: 'Admin',
+      password_hash: `pbkdf2-sha256$210000$${'00'.repeat(16)}$${'00'.repeat(32)}`,
+      role: 'owner',
+      status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const app = createApp({ ...ENV_BASE, DB: db })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@braum.local', password: 'wrong' }),
+    }))
+
+    expect(res.status).toBe(401)
+  })
+
   it('密码错误 → 401', async () => {
     const passwordHash = await hashPassword('correct')
     const user = {

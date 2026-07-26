@@ -3,7 +3,14 @@
 import { Hono } from 'hono'
 import type { Env } from '../env'
 import { success, unauthorized, badRequest } from '../utils/response'
-import { signToken, verifyToken, hashPassword, needsPasswordRehash, verifyPassword } from '../utils/jwt'
+import {
+  signToken,
+  verifyToken,
+  hashPassword,
+  isPasswordHashUnsupported,
+  needsPasswordRehash,
+  verifyPassword,
+} from '../utils/jwt'
 import { writeAuditLog } from '../utils/audit'
 
 export const authRoutes = new Hono<{ Bindings: Env }>()
@@ -58,7 +65,28 @@ authRoutes.post('/login', async (c) => {
   }
 
   // 验证密码哈希
-  const isValid = await verifyPassword(password, user.password_hash as string)
+  let isValid = await verifyPassword(password, user.password_hash as string)
+
+  // 早期版本生成过 210,000 次 PBKDF2 哈希，超过 Workers 的 100,000 次上限。
+  // 仅允许 Owner 使用仍保存在 Worker Secret 中的初始密码完成一次性安全迁移。
+  if (
+    !isValid
+    && email === 'admin@braum.local'
+    && password === c.env.ADMIN_INITIAL_PASSWORD
+    && isPasswordHashUnsupported(user.password_hash as string)
+  ) {
+    const recoveredHash = await hashPassword(password)
+    await c.env.DB.prepare(
+      'UPDATE users SET password_hash = ? WHERE id = ?'
+    ).bind(recoveredHash, user.id as string).run()
+    user.password_hash = recoveredHash
+    isValid = true
+    console.warn(JSON.stringify({
+      event: 'password_hash_recovered',
+      user_id: user.id,
+    }))
+  }
+
   if (!isValid) {
     return c.json(unauthorized('Invalid credentials'), 401)
   }

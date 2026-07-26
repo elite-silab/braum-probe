@@ -118,7 +118,7 @@ https://braum-probe.你的Workers子域.workers.dev
 | Root directory | 留空，使用仓库根目录 |
 | Build command | `pnpm --filter @braum/web build:worker` |
 | Deploy command | `pnpm --filter @braum/web deploy:worker` |
-| Node.js | `22.12.0` 或更新的 22.x |
+| Node.js | `22.14.0` 或更新的 22.x |
 
 这里必须创建 **Worker**，不要选择 Pages，也不要填写 Build output directory。
 

@@ -27,7 +27,7 @@ assignees: []
 ## 环境
 
 - OS: [例如 Ubuntu 22.04]
-- Node.js: [例如 22.12.0]
+- Node.js: [例如 22.14.0]
 - Wrangler: [例如 4.114.0]
 - 浏览器: [例如 Chrome 120]
 

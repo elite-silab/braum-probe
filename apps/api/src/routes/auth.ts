@@ -64,10 +64,19 @@ authRoutes.post('/login', async (c) => {
   }
 
   if (needsPasswordRehash(user.password_hash as string)) {
-    const upgradedHash = await hashPassword(password)
-    await c.env.DB.prepare(
-      "UPDATE users SET password_hash = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
-    ).bind(upgradedHash, user.id as string).run()
+    try {
+      const upgradedHash = await hashPassword(password)
+      await c.env.DB.prepare(
+        "UPDATE users SET password_hash = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+      ).bind(upgradedHash, user.id as string).run()
+    } catch (error) {
+      // 密码已经验证成功；旧库暂时无法升级哈希时不应阻止用户登录。
+      console.error(JSON.stringify({
+        event: 'password_rehash_error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        user_id: user.id,
+      }))
+    }
   }
 
   await writeAuditLog(c.env, {
@@ -140,6 +149,18 @@ authRoutes.get('/me', async (c) => {
  * 签发 access_token + refresh_token 并返回
  */
 async function issueTokens(c: { env: Env; json: (data: unknown, status?: number) => Response }, user: Record<string, unknown>) {
+  if (!c.env.JWT_SECRET || !c.env.JWT_REFRESH_SECRET) {
+    console.error(JSON.stringify({
+      event: 'auth_config_error',
+      message: 'JWT_SECRET or JWT_REFRESH_SECRET is not configured',
+    }))
+    return c.json({
+      code: 50301,
+      message: '登录服务尚未配置，请在 Cloudflare Worker 中添加 JWT Secret 后重新部署',
+      data: null,
+    }, 503)
+  }
+
   const accessToken = await signToken(
     { sub: user.id, email: user.email, role: user.role },
     c.env.JWT_SECRET,
@@ -152,10 +173,18 @@ async function issueTokens(c: { env: Env; json: (data: unknown, status?: number)
     604800 // 7d
   )
 
-  // 更新最后登录时间
-  await c.env.DB.prepare(
-    "UPDATE users SET last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
-  ).bind(user.id as string).run()
+  // 令牌已经签发；旧库字段差异或临时 D1 写入失败不应阻止登录。
+  try {
+    await c.env.DB.prepare(
+      "UPDATE users SET last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+    ).bind(user.id as string).run()
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'last_login_update_error',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      user_id: user.id,
+    }))
+  }
 
   return c.json(success({
     access_token: accessToken,

@@ -132,6 +132,69 @@ describe('POST /api/v1/auth/login', () => {
     expect(body.data.user.id).toBe('user-1')
   })
 
+  it('最后登录时间写入失败时仍可登录', async () => {
+    const passwordHash = await hashPassword('my-password')
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test',
+      password_hash: passwordHash,
+      role: 'admin',
+      status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    db.prepare.mockImplementation((sql: string) => {
+      if (sql.includes('last_login_at')) {
+        return {
+          bind: vi.fn().mockReturnThis(),
+          run: vi.fn().mockRejectedValue(new Error('no such column: last_login_at')),
+        }
+      }
+      return db._chain
+    })
+    const app = createApp({ ...ENV_BASE, DB: db })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@example.com', password: 'my-password' }),
+    }))
+
+    expect(res.status).toBe(200)
+    const body: any = await res.json()
+    expect(body.data.access_token).toBeDefined()
+  })
+
+  it('JWT Secret 缺失时返回明确的 503', async () => {
+    const passwordHash = await hashPassword('my-password')
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test',
+      password_hash: passwordHash,
+      role: 'admin',
+      status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const app = createApp({
+      ...ENV_BASE,
+      DB: db,
+      JWT_SECRET: '',
+      JWT_REFRESH_SECRET: '',
+    })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'test@example.com', password: 'my-password' }),
+    }))
+
+    expect(res.status).toBe(503)
+    const body: any = await res.json()
+    expect(body.code).toBe(50301)
+    expect(body.message).toContain('JWT Secret')
+  })
+
   it('密码错误 → 401', async () => {
     const passwordHash = await hashPassword('correct')
     const user = {

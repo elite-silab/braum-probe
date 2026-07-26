@@ -200,6 +200,42 @@ func commandOutput(name string, args ...string) string {
 	return strings.TrimSpace(string(output))
 }
 
+func osReleaseValue(content, key string) string {
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		name, value, found := strings.Cut(line, "=")
+		if !found || name != key {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+			if unquoted, err := strconv.Unquote(value); err == nil {
+				return strings.TrimSpace(unquoted)
+			}
+		}
+		return strings.Trim(strings.TrimSpace(value), "'")
+	}
+	return ""
+}
+
+func parseOSReleasePrettyName(content string) string {
+	if pretty := osReleaseValue(content, "PRETTY_NAME"); pretty != "" {
+		return pretty
+	}
+	return osReleaseValue(content, "NAME")
+}
+
+func platformName() string {
+	data, err := os.ReadFile("/etc/os-release")
+	if err != nil {
+		return ""
+	}
+	return parseOSReleasePrettyName(string(data))
+}
+
 func cpuModel() string {
 	data, err := os.ReadFile("/proc/cpuinfo")
 	if err != nil {
@@ -231,7 +267,7 @@ func privateIPs() []string {
 func CollectSystemInfo(version string) SystemInfo {
 	hostname, _ := os.Hostname()
 	return SystemInfo{
-		Hostname: hostname, OS: runtime.GOOS, Platform: commandOutput("sh", "-c", ". /etc/os-release 2>/dev/null; printf %s \"$ID\""),
+		Hostname: hostname, OS: runtime.GOOS, Platform: platformName(),
 		KernelVersion: commandOutput("uname", "-r"), Arch: runtime.GOARCH,
 		CPUModel: cpuModel(), CPUCores: runtime.NumCPU(), AgentVersion: version, PrivateIPs: privateIPs(),
 	}

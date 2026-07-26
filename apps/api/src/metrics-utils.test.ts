@@ -32,7 +32,8 @@ describe('node metric presentation helpers', () => {
 
   it('以适合界面的格式展示字节、速率和运行时间', () => {
     expect(formatBytes(1_610_612_736)).toBe('1.50 GB')
+    expect(formatBytes(520_722_432)).toBe('496.6 MB')
     expect(formatTransferRate(1_048_576)).toBe('1.00 MB/s')
-    expect(formatDuration(183_720)).toBe('2 天 3 小时')
+    expect(formatDuration(270_511)).toBe('3 天 3 时 8 分 31 秒')
   })
 })

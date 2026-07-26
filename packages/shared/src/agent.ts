@@ -32,6 +32,12 @@ export interface NodeMetrics {
   collected_at: string
 }
 
+/** 控制面基于相邻两次累计计数器计算的首页指标。 */
+export interface NodeMetricsWithRates extends NodeMetrics {
+  network_rx_bytes_per_second: number | null
+  network_tx_bytes_per_second: number | null
+}
+
 export interface AgentEnrollInput {
   node_id: string
   enrollment_token: string

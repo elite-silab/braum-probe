@@ -22,6 +22,7 @@ interface NodeData {
   sparkline: number[]
   registration_status: 'pending' | 'registered'
   agent_os: string | null
+  agent_platform: string | null
   agent_arch: string | null
   agent_version: string | null
   latest_metrics: {
@@ -33,6 +34,8 @@ interface NodeData {
     load_1: number
     network_rx_bytes: number
     network_tx_bytes: number
+    network_rx_bytes_per_second: number | null
+    network_tx_bytes_per_second: number | null
     tcp_connections: number
     uptime_seconds: number
     collected_at: string
@@ -105,11 +108,11 @@ function SkeletonGrid() {
             </div>
             <div className="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700" />
           </div>
-          <div className="mt-4 flex gap-4">
-            <div className="h-7 w-16 rounded bg-slate-200 dark:bg-slate-700" />
-            <div className="h-7 w-16 rounded bg-slate-200 dark:bg-slate-700" />
+          <div className="mt-4 h-14 rounded-xl bg-slate-200 dark:bg-slate-700" />
+          <div className="mt-5 space-y-4">
+            {Array.from({ length: 3 }).map((_, row) => <div key={row} className="h-7 rounded bg-slate-200 dark:bg-slate-700" />)}
           </div>
-          <div className="mt-4 h-8 rounded bg-slate-200 dark:bg-slate-700" />
+          <div className="mt-4 h-28 rounded-xl bg-slate-200 dark:bg-slate-700" />
         </div>
       ))}
     </div>
@@ -321,9 +324,9 @@ export default function Dashboard() {
             </span>
           </h2>
 
-          <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-4 gap-2 sm:flex sm:w-auto sm:items-center">
             {/* 最后更新 */}
-            <span className="text-xs text-slate-400 dark:text-slate-500 mr-2">
+            <span className="col-span-4 text-right text-xs text-slate-400 dark:text-slate-500 sm:mr-2">
               {ago && `更新于 ${ago}`}
             </span>
 
@@ -331,7 +334,7 @@ export default function Dashboard() {
             <button
               onClick={() => { setRefreshing(true); fetchData() }}
               disabled={refreshing}
-              className="rounded-lg border px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+              className="min-w-0 rounded-lg border px-2 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 sm:px-3"
               title="刷新"
             >
               <span className={refreshing ? 'inline-block animate-spin' : 'inline-block'}>↻</span> {refreshing ? '刷新中' : '刷新'}
@@ -341,7 +344,7 @@ export default function Dashboard() {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.currentTarget.value as StatusFilter)}
-              className="rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="min-w-0 rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
             >
               {statusOptions.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -352,7 +355,7 @@ export default function Dashboard() {
             <select
               value={regionFilter}
               onChange={e => setRegionFilter(e.currentTarget.value as RegionFilter)}
-              className="rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="min-w-0 rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
             >
               {regionOptions.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -363,7 +366,7 @@ export default function Dashboard() {
             <select
               value={sortKey}
               onChange={e => setSortKey(e.currentTarget.value as SortKey)}
-              className="rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="min-w-0 rounded-lg border px-2 py-1.5 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
             >
               <option value="name">按名称</option>
               <option value="latency">按延迟</option>
@@ -385,6 +388,7 @@ export default function Dashboard() {
                 status={n.status}
                 registrationStatus={n.registration_status}
                 agentOS={n.agent_os}
+                agentPlatform={n.agent_platform}
                 agentArch={n.agent_arch}
                 agentVersion={n.agent_version}
                 avgLatency={n.avg_latency}

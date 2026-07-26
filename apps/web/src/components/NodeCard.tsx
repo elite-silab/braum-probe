@@ -1,5 +1,5 @@
 // Braum 布隆 CF 探针 — VPS 节点状态卡片
-import { formatBytes, formatDuration } from '@braum/shared'
+import { formatBytes, formatDuration, formatTransferRate } from '@braum/shared'
 
 interface Metrics {
   cpu_usage: number
@@ -10,6 +10,8 @@ interface Metrics {
   load_1: number
   network_rx_bytes: number
   network_tx_bytes: number
+  network_rx_bytes_per_second: number | null
+  network_tx_bytes_per_second: number | null
   tcp_connections: number
   uptime_seconds: number
   collected_at: string
@@ -23,6 +25,7 @@ interface NodeCardProps {
   status: string
   registrationStatus: 'pending' | 'registered'
   agentOS: string | null
+  agentPlatform: string | null
   agentArch: string | null
   agentVersion: string | null
   avgLatency: number | null
@@ -56,19 +59,33 @@ function ageLabel(value: string): string {
   return `${Math.floor(seconds / 3600)} 小时前采集`
 }
 
-function ResourceBar({ label, value, detail }: { label: string; value: number; detail: string }) {
+function ResourceBar({ label, value, detail, usage }: { label: string; value: number; detail: string; usage?: string }) {
   const color = value >= 90 ? 'bg-red-500' : value >= 75 ? 'bg-amber-500' : 'bg-emerald-500'
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between text-xs">
-        <span className="text-slate-500 dark:text-slate-400">{label}</span>
-        <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{detail}</span>
+      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-xs">
+        <span className="font-medium text-slate-600 dark:text-slate-300">{label}</span>
+        <span className="min-w-0 text-right">
+          <strong className="font-mono font-semibold text-slate-800 dark:text-slate-100">{detail}</strong>
+          {usage && <span className="ml-1.5 font-mono text-[10px] text-slate-400">({usage})</span>}
+        </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/70">
         <div className={`h-full rounded-full transition-[width] duration-500 ${color}`} style={{ width: `${value}%` }} />
       </div>
     </div>
   )
+}
+
+function osFamily(value: string | null): string {
+  if (!value) return 'Linux'
+  const normalized = value.toLowerCase()
+  const families: Array<[string, string]> = [
+    ['debian', 'Debian'], ['ubuntu', 'Ubuntu'], ['alpine', 'Alpine'],
+    ['centos', 'CentOS'], ['rocky', 'Rocky'], ['alma', 'AlmaLinux'],
+    ['fedora', 'Fedora'], ['arch', 'Arch'], ['opensuse', 'openSUSE'],
+  ]
+  return families.find(([keyword]) => normalized.includes(keyword))?.[1] || value.split(/[\s/]+/)[0]
 }
 
 function Sparkline({ data, id }: { data: number[]; id: string }) {
@@ -112,16 +129,15 @@ export default function NodeCard(props: NodeCardProps) {
         : { label: '在线', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' }
   const memory = metrics ? percent(metrics.memory_used_bytes, metrics.memory_total_bytes) : 0
   const disk = metrics ? percent(metrics.disk_used_bytes, metrics.disk_total_bytes) : 0
+  const systemName = props.agentPlatform || props.agentOS
+  const totalTraffic = metrics ? metrics.network_rx_bytes + metrics.network_tx_bytes : 0
 
   return (
     <a href={`/node/${props.id}`} className="group block rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg dark:border-slate-700/80 dark:bg-slate-900/80 dark:hover:border-brand-700">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold text-slate-950 dark:text-white">{props.name}</h3>
-          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-            {countryFlag(props.country)} {props.city || props.country}
-            {props.agentOS && ` · ${props.agentOS}/${props.agentArch || '?'}`}
-          </p>
+          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{countryFlag(props.country)} {props.city || props.country}</p>
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
@@ -129,11 +145,21 @@ export default function NodeCard(props: NodeCardProps) {
         </span>
       </div>
 
+      <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-800/50">
+        <div className="flex items-start justify-between gap-4">
+          <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">OS</span>
+          <div className="min-w-0 text-right">
+            <p className="break-words text-sm font-semibold leading-5 text-slate-800 dark:text-slate-100">{systemName || '等待 Agent 识别'}</p>
+            <p className="mt-0.5 font-mono text-[11px] text-slate-400">{systemName ? `${osFamily(systemName)} / ${props.agentArch || '?'}` : '-- / --'}</p>
+          </div>
+        </div>
+      </div>
+
       {metrics ? (
-        <div className="mt-5 space-y-3.5">
+        <div className="mt-5 space-y-4">
           <ResourceBar label="CPU" value={metrics.cpu_usage} detail={`${metrics.cpu_usage.toFixed(1)}%`} />
-          <ResourceBar label="内存" value={memory} detail={`${memory.toFixed(1)}%`} />
-          <ResourceBar label="磁盘" value={disk} detail={`${disk.toFixed(1)}%`} />
+          <ResourceBar label="内存" value={memory} detail={`${memory.toFixed(1)}%`} usage={`${formatBytes(metrics.memory_used_bytes)} / ${formatBytes(metrics.memory_total_bytes)}`} />
+          <ResourceBar label="磁盘" value={disk} detail={`${disk.toFixed(1)}%`} usage={`${formatBytes(metrics.disk_used_bytes)} / ${formatBytes(metrics.disk_total_bytes)}`} />
         </div>
       ) : (
         <div className="mt-5 flex h-[91px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
@@ -142,10 +168,19 @@ export default function NodeCard(props: NodeCardProps) {
       )}
 
       {metrics && (
-        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50/90 p-3 dark:bg-slate-800/60">
-          <CompactMetric label="↓ 累计下载" value={formatBytes(metrics.network_rx_bytes)} />
-          <CompactMetric label="↑ 累计上传" value={formatBytes(metrics.network_tx_bytes)} />
-          <CompactMetric label="运行时间" value={formatDuration(metrics.uptime_seconds)} />
+        <div className="mt-5 overflow-hidden rounded-xl border border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50">
+          <DataRow
+            label="总流量"
+            note="本次开机"
+            value={formatBytes(totalTraffic)}
+            detail={`↑ ${formatBytes(metrics.network_tx_bytes)}  ↓ ${formatBytes(metrics.network_rx_bytes)}`}
+          />
+          <DataRow
+            label="实时网络"
+            value={`↑ ${formatTransferRate(metrics.network_tx_bytes_per_second)}`}
+            detail={`↓ ${formatTransferRate(metrics.network_rx_bytes_per_second)}`}
+          />
+          <DataRow label="运行时间" value={formatDuration(metrics.uptime_seconds)} />
         </div>
       )}
 
@@ -173,11 +208,17 @@ export default function NodeCard(props: NodeCardProps) {
   )
 }
 
-function CompactMetric({ label, value }: { label: string; value: string }) {
+function DataRow({ label, note, value, detail }: { label: string; note?: string; value: string; detail?: string }) {
   return (
-    <div className="min-w-0" title={`${label}：${value}`}>
-      <p className="truncate font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{value}</p>
-      <p className="mt-0.5 truncate text-[10px] text-slate-400">{label}</p>
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-3.5 py-3 last:border-b-0 dark:border-slate-700/70">
+      <div className="shrink-0">
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
+        {note && <p className="mt-0.5 text-[10px] text-slate-400">{note}</p>}
+      </div>
+      <div className="min-w-0 text-right font-mono">
+        <p className="break-words text-xs font-semibold text-slate-800 dark:text-slate-100">{value}</p>
+        {detail && <p className="mt-0.5 break-words text-[10px] text-slate-400">{detail}</p>}
+      </div>
     </div>
   )
 }

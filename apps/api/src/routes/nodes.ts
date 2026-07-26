@@ -1,6 +1,7 @@
 // Braum 布隆 CF 探针 — 节点管理路由
 
 import { Hono } from 'hono'
+import { calculateNetworkRateSeries } from '@braum/shared'
 import type { Env } from '../env'
 import { success, paginated, notFound, badRequest } from '../utils/response'
 import { writeAuditLog } from '../utils/audit'
@@ -87,20 +88,28 @@ nodeRoutes.get('/', async (c) => {
   const agentRows = await c.env.DB.prepare(`
     SELECT n.id AS node_id,
            CASE WHEN ac.node_id IS NULL THEN 'pending' ELSE 'registered' END AS registration_status,
-           ai.os, ai.arch, ai.agent_version,
+           ai.os, ai.platform, ai.arch, ai.agent_version,
            m.cpu_usage, m.memory_used_bytes, m.memory_total_bytes,
            m.swap_used_bytes, m.swap_total_bytes,
            m.disk_used_bytes, m.disk_total_bytes,
            m.load_1, m.load_5, m.load_15,
            m.network_rx_bytes, m.network_tx_bytes,
            m.tcp_connections, m.process_count, m.uptime_seconds,
-           m.collected_at
+           m.collected_at,
+           pm.network_rx_bytes AS previous_network_rx_bytes,
+           pm.network_tx_bytes AS previous_network_tx_bytes,
+           pm.collected_at AS previous_collected_at
     FROM nodes n
     LEFT JOIN agent_credentials ac ON ac.node_id = n.id
     LEFT JOIN node_agent_info ai ON ai.node_id = n.id
     LEFT JOIN node_metrics m ON m.id = (
       SELECT id FROM node_metrics
       WHERE node_id = n.id
+      ORDER BY collected_at DESC LIMIT 1
+    )
+    LEFT JOIN node_metrics pm ON pm.id = (
+      SELECT id FROM node_metrics
+      WHERE node_id = n.id AND collected_at < m.collected_at
       ORDER BY collected_at DESC LIMIT 1
     )
     WHERE n.id IN (${placeholders})
@@ -157,10 +166,25 @@ nodeRoutes.get('/', async (c) => {
     const s = statsMap.get(id)
     const agent = agentMap.get(id)
     const hasMetrics = agent?.collected_at != null
+    const networkRates = hasMetrics && agent?.previous_collected_at
+      ? calculateNetworkRateSeries([
+          {
+            network_rx_bytes: Number(agent.previous_network_rx_bytes),
+            network_tx_bytes: Number(agent.previous_network_tx_bytes),
+            collected_at: String(agent.previous_collected_at),
+          },
+          {
+            network_rx_bytes: Number(agent.network_rx_bytes),
+            network_tx_bytes: Number(agent.network_tx_bytes),
+            collected_at: String(agent.collected_at),
+          },
+        ]).at(-1)
+      : null
     return {
       ...n,
       registration_status: agent?.registration_status || 'pending',
       agent_os: agent?.os || null,
+      agent_platform: agent?.platform || null,
       agent_arch: agent?.arch || null,
       agent_version: agent?.agent_version || null,
       latest_metrics: hasMetrics ? {
@@ -176,6 +200,8 @@ nodeRoutes.get('/', async (c) => {
         load_15: agent?.load_15,
         network_rx_bytes: agent?.network_rx_bytes,
         network_tx_bytes: agent?.network_tx_bytes,
+        network_rx_bytes_per_second: networkRates?.rx_bytes_per_second ?? null,
+        network_tx_bytes_per_second: networkRates?.tx_bytes_per_second ?? null,
         tcp_connections: agent?.tcp_connections,
         process_count: agent?.process_count,
         uptime_seconds: agent?.uptime_seconds,

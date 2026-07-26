@@ -1,6 +1,6 @@
 // Braum 布隆 CF 探针 — 节点类型定义
 
-import type { NodeMetrics } from './agent'
+import type { NodeMetricsWithRates } from './agent'
 
 /** 节点地理区域 */
 export type NodeRegion =
@@ -49,9 +49,10 @@ export interface NodeSummary {
   last_heartbeat_at: string | null
   registration_status?: 'pending' | 'registered'
   agent_os?: string | null
+  agent_platform?: string | null
   agent_arch?: string | null
   agent_version?: string | null
-  latest_metrics?: NodeMetrics | null
+  latest_metrics?: NodeMetricsWithRates | null
 }
 
 /** 创建节点请求 */

@@ -120,6 +120,36 @@ describe('GET /api/v1/nodes', () => {
     expect(body.meta.page_size).toBe(10)
     expect(body.meta.total_pages).toBe(5)
   })
+
+  it('首页节点包含完整系统名称和最近采样网速', async () => {
+    const db = mockDBWithChains([
+      { first: { total: 1 } },
+      { all: [SAMPLE_NODE] },
+      { all: [{
+        node_id: 'node-1', registration_status: 'registered', os: 'linux',
+        platform: 'Debian GNU/Linux 12 (bookworm)', arch: 'amd64', agent_version: '0.1.0',
+        cpu_usage: 0.2, memory_used_bytes: 520_722_432, memory_total_bytes: 2_040_109_465,
+        disk_used_bytes: 1_309_962_240, disk_total_bytes: 63_286_460_416,
+        load_1: 0.1, network_rx_bytes: 249_140, network_tx_bytes: 256_530,
+        tcp_connections: 12, process_count: 42, uptime_seconds: 270_511,
+        collected_at: '2026-07-27T00:01:00Z',
+        previous_network_rx_bytes: 128_140, previous_network_tx_bytes: 130_930,
+        previous_collected_at: '2026-07-27T00:00:50Z',
+      }] },
+      { all: [] },
+      { all: [] },
+      { first: { total: 0 } },
+    ])
+    const app = createApp({ ...ENV_BASE, DB: db })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/nodes'))
+    const body: any = await res.json()
+    const node = body.data[0]
+
+    expect(node.agent_platform).toBe('Debian GNU/Linux 12 (bookworm)')
+    expect(node.latest_metrics.network_rx_bytes_per_second).toBe(12_100)
+    expect(node.latest_metrics.network_tx_bytes_per_second).toBe(12_560)
+  })
 })
 
 describe('GET /api/v1/nodes/:id', () => {

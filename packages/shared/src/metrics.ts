@@ -46,8 +46,11 @@ export function formatBytes(value: number): string {
     size /= 1024
     unit++
   }
-  const decimals = unit === 0 || size >= 100 ? 0 : size >= 10 ? 1 : 2
-  return `${size.toFixed(decimals)} ${units[unit]}`
+  if (unit === 0) return `${size.toFixed(0)} ${units[unit]}`
+  const formatted = size < 10
+    ? size.toFixed(2)
+    : size.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
+  return `${formatted} ${units[unit]}`
 }
 
 export function formatTransferRate(value: number | null | undefined): string {
@@ -60,8 +63,9 @@ export function formatDuration(totalSeconds: number): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  if (days > 0) return `${days} 天 ${hours} 小时`
-  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`
-  if (minutes > 0) return `${minutes} 分钟`
-  return `${seconds} 秒`
+  const remainingSeconds = seconds % 60
+  if (days > 0) return `${days} 天 ${hours} 时 ${minutes} 分 ${remainingSeconds} 秒`
+  if (hours > 0) return `${hours} 时 ${minutes} 分 ${remainingSeconds} 秒`
+  if (minutes > 0) return `${minutes} 分 ${remainingSeconds} 秒`
+  return `${remainingSeconds} 秒`
 }

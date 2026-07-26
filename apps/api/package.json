@@ -4,16 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --env-file ../../.env",
-    "build": "WRANGLER_LOG_PATH=${WRANGLER_LOG_PATH:-/tmp/braum-wrangler.log} wrangler deploy --dry-run --outdir=dist --env=",
-    "deploy": "wrangler deploy",
-    "deploy:full": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "db:migrate": "wrangler d1 migrations apply DB --local"
+    "db:migrate": "wrangler d1 migrations apply DB --local --config ../../wrangler.jsonc"
   },
   "dependencies": {
     "@braum/shared": "workspace:*",

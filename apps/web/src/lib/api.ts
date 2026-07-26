@@ -2,8 +2,7 @@
 // 前端展示页使用 Workers Public API
 // 前台和管理后台统一使用 Workers API
 
-const API_BASE = import.meta.env.PUBLIC_API_URL
-  || (import.meta.env.DEV ? 'http://localhost:8787' : '')
+const API_BASE = ''
 const ADMIN_API_BASE = `${API_BASE}/api/admin/v1` // 直接调用 Workers Admin API
 
 interface ApiResponse<T> {
@@ -17,6 +16,15 @@ interface ApiResponse<T> {
     total: number
     total_pages: number
   }
+}
+
+interface RawApiResponse<T> {
+  code?: number
+  message?: string
+  error?: string
+  data?: T | null
+  success?: boolean
+  meta?: ApiResponse<T>['meta']
 }
 
 function getToken(): string {
@@ -39,10 +47,10 @@ async function request<T>(url: string, options?: RequestInit): Promise<ApiRespon
       },
       ...options,
     })
-    const json = await res.json()
+    const json = await res.json() as RawApiResponse<T>
     // 标准化 API 响应：Workers API 返回 { code: 0, data, meta } 格式
     // 转换为前端统一的 { success, data, error, meta } 格式
-    if ('code' in json) {
+    if (typeof json.code === 'number') {
       return {
         success: json.code === 0,
         data: json.data ?? undefined,
@@ -51,7 +59,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<ApiRespon
         meta: json.meta,
       }
     }
-    return json
+    return json as ApiResponse<T>
   } catch (error) {
     return {
       success: false,

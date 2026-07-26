@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 暗色主题切换组件
 import { useState, useEffect } from 'react'
 

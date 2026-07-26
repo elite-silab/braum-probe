@@ -2,11 +2,10 @@
 
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
-import eslintPluginAstro from 'eslint-plugin-astro'
 
 export default [
   // 全局忽略
-  { ignores: ['**/dist/**', '**/.wrangler/**', '**/node_modules/**', '**/.astro/**'] },
+  { ignores: ['**/dist/**', '**/.wrangler/**', '**/node_modules/**', '**/.astro/**', '**/.next/**', '**/.open-next/**'] },
 
   // JS 推荐规则
   js.configs.recommended,
@@ -24,9 +23,6 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
-
-  // Astro 规则
-  ...eslintPluginAstro.configs.recommended,
 
   // 全局规则
   {

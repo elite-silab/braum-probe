@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 通用数据表格组件
 import { useState } from 'react'
 

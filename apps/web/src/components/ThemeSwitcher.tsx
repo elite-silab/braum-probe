@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 主题切换器（4 套主题 + 独立 Dark 模式开关）
 import { useState, useEffect, useRef } from 'react'
 

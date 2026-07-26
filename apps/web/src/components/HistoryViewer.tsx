@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 历史数据查看器（客户端 Island）
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'

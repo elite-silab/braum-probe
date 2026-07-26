@@ -5,8 +5,11 @@ const HEADER = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).replace(/=+$/,
 /**
  * 将 string 转为 Uint8Array
  */
-function strToBytes(str: string): Uint8Array {
-  return new TextEncoder().encode(str)
+function strToBytes(str: string): Uint8Array<ArrayBuffer> {
+  const encoded = new TextEncoder().encode(str)
+  const bytes = new Uint8Array(encoded.byteLength)
+  bytes.set(encoded)
+  return bytes
 }
 
 /**

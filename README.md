@@ -5,276 +5,203 @@
 <h1 align="center">Braum 布隆探针</h1>
 
 <p align="center">
-  <strong>Cloudflare 原生 · 无需额外控制面服务器 · 轻量 VPS 监控与网络探测</strong>
-</p>
-
-<p align="center">
-  <a href="#-快速开始">快速开始</a> •
-  <a href="#-技术栈">技术栈</a> •
-  <a href="#-文档">文档</a> •
-  <a href="#-截图">截图</a>
+  <strong>一个 Cloudflare Worker，即可拥有轻量的 VPS 资源监控与网络探测平台</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
+  <img src="https://img.shields.io/badge/Frontend-Next.js-000000?logo=nextdotjs&logoColor=white" alt="Next.js" />
   <img src="https://img.shields.io/badge/Agent-Go-00ADD8?logo=go&logoColor=white" alt="Go Agent" />
-  <img src="https://img.shields.io/badge/Frontend-Astro-BC52EE?logo=astro&logoColor=white" alt="Astro" />
   <img src="https://img.shields.io/badge/Database-D1-0052CC?logo=sqlite&logoColor=white" alt="D1" />
   <a href="https://github.com/elite-silab/braum-probe/actions/workflows/ci.yml"><img src="https://github.com/elite-silab/braum-probe/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
 </p>
 
+## 为什么选择 Braum？
 
-## ✨ 为什么选择 Braum？
+- **只部署一个 Worker**：网站、管理后台、API、Agent 接口和 Cron 共用一个地址与一份配置。
+- **无需控制面 VPS**：Next.js、Hono、D1 和 KV 全部运行在 Cloudflare。
+- **Agent 主动外连**：VPS 只通过出站 HTTPS 上报，不需要开放 Agent 端口。
+- **节点本地探测**：HTTP/DNS 任务在 VPS 上执行，真实反映不同地区的网络质量。
+- **添加节点简单**：后台只填节点名称，即可生成 15 分钟有效的一次性安装命令。
+- **轻量易维护**：单文件 Go Agent、自动数据库迁移、自动聚合与数据清理。
 
-- **无需额外控制面 VPS**：API、SSR 前端、数据库和缓存分别运行在 Workers、D1 和 KV 上
-- **Agent 主动外连**：被监控 VPS 仅通过出站 HTTPS 上报，不需要开放 Agent 入站端口
-- **节点本地探测**：HTTP 和 DNS 任务由各 VPS 就近执行，便于观察不同地区的网络质量
-- **添加节点简单**：后台只需填写节点名称，即可生成一次性安装命令
-- **轻量易维护**：单文件 Go Agent、自动数据库迁移、数据定期清理
+## 功能
 
-> Braum 将控制面放在 Cloudflare 上，无需再准备一台 VPS 托管管理后台。轻量规模通常可以使用 Cloudflare 免费额度；被监控 VPS 的费用及超出免费额度后的 Cloudflare 用量不包含在内。
+- VPS CPU、内存、Swap、磁盘、负载、流量和连接数监控
+- HTTP/DNS 节点本地探测、延迟趋势与可用率
+- 一次性 Agent 注册令牌与节点独立密钥
+- CPU、内存、磁盘、负载、心跳、延迟和连续失败告警
+- Telegram 与 Webhook 通知
+- 故障公告、事件时间线和公开状态页
+- Owner / Admin / Viewer 权限与审计日志
+- 四套主题和独立暗色模式
 
-## 🚀 特性一览
+## 截图
 
-- 🖥️ **VPS 资源监控** — CPU、内存、Swap、磁盘、负载、流量、连接数，Agent 默认每 60 秒主动上报
-- 🔍 **节点本地探测** — HTTP/DNS 任务由 VPS Agent 就近执行，真实反映各地网络质量
-- 🔐 **安全注册** — 一次性安装令牌 15 分钟有效；D1 仅存密钥摘要，Agent 密钥保存在 VPS 的 `0600` 配置文件中
-- 📊 **状态总览** — 在线状态、资源趋势、延迟趋势、可用率指标
-- 🔔 **智能告警** — CPU/内存/磁盘/负载/心跳/延迟/可用率/连续失败，Telegram + Webhook 通知
-- 📢 **故障公告** — 维护计划、事件时间线、公开状态页
-- 👥 **权限审计** — Owner/Admin/Viewer 三级权限，敏感字段自动脱敏
-- 🎨 **四套主题** — 默认 / 樱の物语 / 星海夜航 / 翠灵庭院，独立 Dark 模式开关
-- ☁️ **Cloudflare 原生** — API 与 Web 均运行在 Workers，配合 D1 + KV，无需自管控制面服务器
-
-## 📸 截图
-
-| 前端首页 | 管理后台 |
+| 状态首页 | 管理后台 |
 |:---:|:---:|
 | ![Braum 状态总览](docs/screenshots/dashboard.png) | ![Braum 管理后台](docs/screenshots/admin-dashboard.png) |
 
-## 🏗️ 架构
+## 架构
 
 ```text
- 浏览器 ─────▶ Web Worker / Astro SSR
-                       │ HTTPS API
-                       ▼
-              API Worker / Hono
-              鉴权 · 配置 · 告警
-                       │
-                 ┌─────┴─────┐
-                 │ D1     KV │
-                 └─────┬─────┘
-                       ▲
-      HTTPS 主动上报   │
-  ┌────────────────────┼────────────────────┐
-  │ VPS Agent 东京     │ VPS Agent 法兰克福 │ VPS Agent 洛杉矶
-  └────────────── HTTP / DNS 节点本地探测 ──┘
+浏览器 ───────────────┐
+                     ▼
+VPS Agent ──HTTPS──▶ braum-probe Worker
+                     ├─ Next.js 状态页 / 管理后台
+                     ├─ Hono API / Agent 接口
+Cloudflare Cron ────▶ ├─ 定时告警 / 聚合 / 清理
+                     └─ D1 + KV
 ```
 
-- **控制面**（Cloudflare）：API Worker 处理数据与鉴权，Web Worker 运行 Astro SSR，D1 存数据，KV 做缓存
-- **Agent**（VPS 上）：Go 编写的轻量常驻进程，仅出站 HTTPS，不开入站端口
+唯一生产地址同时提供：
 
-## 🛠️ 技术栈
+- 网站：`https://braum-probe.codeelite.workers.dev`
+- 管理后台：`https://braum-probe.codeelite.workers.dev/admin`
+- 健康检查：`https://braum-probe.codeelite.workers.dev/health`
+- API 与 Agent：同一域名下的 `/api/*`
+
+## 技术栈
 
 | 层级 | 技术 | 作用 |
 |:---|:---|:---|
-| 控制面 | **Cloudflare Workers + Hono** | API、鉴权、节点管理与告警 |
-| 数据库 | **Cloudflare D1** | 节点、指标、探测、审计数据 |
-| 缓存 | **Cloudflare KV** | 配置和热点数据缓存 |
-| 前端 | **Astro SSR + React + Tailwind CSS** | Web Worker 上的状态页与管理后台 |
-| Agent | **Go** | VPS 资源采集和节点本地探测 |
-| 共享类型 | **pnpm workspace** | API 与前端之间的 TypeScript 类型契约 |
+| 全栈 Worker | Cloudflare Workers + OpenNext | 单 Worker 运行完整应用 |
+| 前端 | Next.js App Router + React + Tailwind CSS | 状态页与管理后台 |
+| API | Hono | 鉴权、节点、探测、告警与 Agent 接口 |
+| 数据 | Cloudflare D1 + KV | 持久数据、缓存与限流状态 |
+| Agent | Go | VPS 资源采集与本地网络探测 |
 
-## 🚀 快速开始
+## 快速部署
 
-> **你需要**：一个 Cloudflare 账号 + 一台被监控的 VPS。不需要域名，Cloudflare 会提供免费的 `workers.dev` 地址；轻量使用可以从免费额度开始。
+> 你只需要 GitHub、Cloudflare 和一台要监控的 Linux VPS。生产部署可以全部在网页中完成。
 
-### 第一步：Fork 仓库
+### 1. Fork 并发布 Agent
 
-打开本仓库 → 右上角 **Fork** → **Create fork**
+1. Fork 本仓库。
+2. 打开 Fork 后仓库的 **Actions → Agent Release → Run workflow**。
+3. 等待工作流变绿，确认 **Releases** 中出现 amd64、arm64 和对应 `.sha256` 文件。
 
-### 第二步：发布 Agent
+### 2. 创建 D1 与 KV
 
-Fork 仓库 → **Actions** → 启用工作流 → 左侧 **Agent Release** → **Run workflow** → 等变绿
+在 Cloudflare 控制台创建：
 
-### 第三步：创建 D1 和 KV
+| 资源 | 名称 | 复制内容 |
+|---|---|---|
+| D1 | `braum-production` | Database ID |
+| KV | `braum-cache` | Namespace ID |
 
-Cloudflare 控制台分别创建：
+### 3. 编辑唯一配置
 
-| 资源 | 路径 | 名称 | 需要复制 |
-|------|------|------|----------|
-| D1 数据库 | Storage & Databases → D1 → Create | `braum-production` | Database ID |
-| KV 命名空间 | Storage & Databases → KV → Create | `braum-cache` | Namespace ID |
+在 GitHub 网页打开根目录 `wrangler.jsonc`，点击铅笔按钮，修改：
 
-### 第四步：编辑配置
+- `AGENT_API_URL`：你的 Worker 完整 HTTPS 地址；
+- `AGENT_RELEASE_BASE_URL`：你的 GitHub Release 下载地址；
+- `database_id`：刚创建的 D1 ID；
+- KV 的 `id`：刚创建的 KV ID。
 
-GitHub 打开 `apps/api/wrangler.toml` → 点铅笔 ✏️ → 改三处：
+Cloudflare 的 Workers 子域可在控制台中查看。Worker 名称保持 `braum-probe` 时，地址格式通常是：
 
-```toml
-AGENT_RELEASE_BASE_URL = "https://github.com/你的用户名/braum-probe/releases/latest/download"
-database_id = "第三步的 D1 ID"
-id = "第三步的 KV ID"
+```text
+https://braum-probe.你的Workers子域.workers.dev
 ```
 
-点 **Commit changes** 保存。
+### 4. 创建唯一 Worker
 
-### 第五步：部署 API（Worker）
+进入 **Cloudflare → Workers & Pages → Create → Import from Git**，选择 Fork 后的仓库：
 
-Workers & Pages → Create → Import from Git → 选你 Fork 的仓库，填写：
+| 设置 | 值 |
+|---|---|
+| Project name | `braum-probe` |
+| Production branch | `main` |
+| Root directory | 留空，使用仓库根目录 |
+| Build command | `pnpm --filter @braum/web build:worker` |
+| Deploy command | `pnpm --filter @braum/web deploy:worker` |
+| Node.js | `22.12.0` 或更新的 22.x |
 
-> 这里要创建 **Worker** 项目。如果页面要求填写 `Build output directory`、没有 `Deploy command`，说明进入了 Pages 流程，请返回后选择 Workers/Worker。
+这里必须创建 **Worker**，不要选择 Pages，也不要填写 Build output directory。
 
-| 配置项 | 值 |
-|------|-----|
-| Project name | `braum-worker` |
-| Build command | `pnpm --filter @braum/shared build` |
-| Deploy command | `pnpm --filter @braum/api deploy:full` |
-| Node version | `22.12.0` 或更新的 22.x |
+### 5. 填写生产密钥
 
-点 **Save and Deploy**，部署成功后复制 Worker 地址（如 `https://braum-worker.xxx.workers.dev`）。
+进入这个 Worker 的 **Settings → Variables and Secrets**，添加四个加密 Secret：
 
-然后进入 Worker **Settings → Variables and Secrets**，添加 4 个 Secret：
+| 名称 | 内容 |
+|---|---|
+| `JWT_SECRET` | 密码管理器生成的随机长字符串 |
+| `JWT_REFRESH_SECRET` | 另一个不同的随机长字符串 |
+| `ENCRYPTION_KEY` | 再一个不同的随机长字符串 |
+| `ADMIN_INITIAL_PASSWORD` | 管理后台初始密码 |
 
-| 变量 | 值 |
-|------|-----|
-| `JWT_SECRET` | 随机长字符串 |
-| `JWT_REFRESH_SECRET` | 另一个随机长字符串 |
-| `ENCRYPTION_KEY` | 再一个随机长字符串 |
-| `ADMIN_INITIAL_PASSWORD` | 你自己设的登录密码 |
+保存后重新部署一次。不要把这些生产密钥写入仓库。
 
-保存后再 Deploy 一次 ☕
+### 6. 登录并安装 Agent
 
-### 第六步：部署前端（Web Worker）
+1. 打开 Worker 地址的 `/admin`。
+2. 邮箱使用 `admin@braum.local`，密码使用刚设置的 `ADMIN_INITIAL_PASSWORD`。
+3. 进入「VPS 节点」并添加节点，只需填写名称。
+4. 复制后台生成的安装命令，在被监控 VPS 上执行。
+5. 等待约一分钟，节点会开始上报资源和探测数据。
 
-再次进入 Workers & Pages → Create → Import from Git → 选择同一个仓库，填写：
+完整网页步骤和常见问题见 [小白部署指南](docs/小白部署指南.md)。
 
-> 前端使用 Astro SSR，必须创建 **Worker** 项目，不要选择 Pages，也不要填写 `Build output directory`。
-
-| 配置项 | 值 |
-|------|-----|
-| Project name | `braum-web` |
-| Build command | `pnpm --filter @braum/shared build && pnpm --filter @braum/web build` |
-| Deploy command | `pnpm --filter @braum/web run deploy:worker` |
-| Node version | `22.12.0` 或更新的 22.x |
-
-在 Web Worker 的构建变量中添加：
-
-| 变量 | 值 |
-|------|-----|
-| `PUBLIC_API_URL` | `https://braum-worker.xxx.workers.dev`（第五步的地址） |
-
-保存后重新部署，成功后复制 Web Worker 实际生成的 `workers.dev` 地址。
-
-### 第七步：回填地址
-
-回 GitHub 再编辑 `apps/api/wrangler.toml`，把 Cloudflare 实际生成的两个地址粘贴到引号内。下面的域名只是格式示例，请勿照抄：
-
-```toml
-CORS_ORIGINS = "https://braum-web.your-subdomain.workers.dev"
-AGENT_API_URL = "https://braum-worker.your-subdomain.workers.dev"
-```
-
-Commit 后自动重新部署。
-
-### 第八步：登录 + 安装 VPS
-
-1. 打开第六步复制的 Web Worker 地址，在末尾加上 `/admin`
-2. 邮箱 `admin@braum.local`，密码填第五步设的 `ADMIN_INITIAL_PASSWORD`
-3. 「VPS 节点」→ 添加（只需填名称）→ 复制安装命令
-4. SSH 到 VPS 执行，等 1 分钟节点上线 ✅
-
-### ✅ 部署完成检查
-
-- Worker 的 `/health` 返回正常状态；
-- Web Worker 首页可以打开，浏览器没有“网络请求失败”；
-- `/admin` 可以使用初始密码登录；
-- 后台可以生成一次性 Agent 安装命令；
-- VPS 安装后约 1 分钟内变为在线，并开始出现资源和探测数据。
-
-> 📖 详细图文见 [小白部署指南](docs/小白部署指南.md) · 命令行部署见 [部署运维文档](docs/部署运维文档.md)
-
-### 本地开发
+## 本地开发
 
 ```bash
-git clone https://github.com/elite-silab/braum-probe.git && cd braum-probe
-pnpm install && cp .env.example .env
+git clone https://github.com/elite-silab/braum-probe.git
+cd braum-probe
+pnpm install
+cp .env.example .env
 pnpm dev
 ```
 
-`.env.example` 提供可直接运行的本地默认值；需要自定义时直接编辑生成的 `.env`。复制命令只需在首次安装时执行，已有 `.env` 时不要重复执行，以免覆盖自己的配置。`pnpm dev` 会自动执行本地 D1 migration，不需要单独运行数据库命令。
+直接编辑根目录 `.env` 即可调整本地密码或 Agent 地址。`pnpm dev` 会通过 `predev` 自动执行本地 D1 migration。
 
-- 前端：`http://localhost:4321`
-- 管理后台：`http://localhost:4321/admin`（邮箱 `admin@braum.local`，密码为 `.env` 中的 `ADMIN_INITIAL_PASSWORD`）
-- API：`http://localhost:8787`
+- 网站：`http://localhost:3000`
+- 管理后台：`http://localhost:3000/admin`
+- 健康检查：`http://localhost:3000/health`
+- API：同一地址下的 `/api/*`
 
-### 添加第一台 VPS
+## 项目结构
 
-1. 登录 `/admin` → 「VPS 节点」→ 点击「添加节点」
-2. 只需填写名称，系统自动生成一次性安装命令
-3. 在目标 VPS 上执行安装命令（自动识别架构、校验 SHA-256、创建沙箱服务）
-4. 等待 ~1 分钟，节点自动上线
-
-## 📦 项目结构
-
-```
+```text
+worker.ts            # 唯一 Cloudflare Worker 入口
+wrangler.jsonc       # 唯一生产配置
 apps/
-├── api/          # Cloudflare Worker / Hono 控制面
-│   └── migrations/ # D1 数据库迁移脚本
-├── agent/        # Go VPS Agent（轻量常驻进程）
-└── web/          # Astro + React 状态页与管理后台
-packages/
-└── shared/       # TypeScript 跨层共享类型
-docs/             # 架构、部署、交互与数据库文档
+├── api/             # Hono API、Cron 与 D1 migrations
+├── agent/           # Go VPS Agent
+└── web/             # Next.js App Router 前端
+packages/shared/     # TypeScript 共享类型
+docs/                # 架构、部署和交互文档
 ```
 
-## 🔒 安全
+## 安全
 
-- **RBAC 权限**：Owner / Admin / Viewer，每次请求从 D1 读取角色状态
-- **Agent 密钥**：D1 仅存 SHA-256 摘要；密钥只返回一次，并以 `0600` 权限保存在 VPS 配置文件中
-- **通知加密**：渠道配置 AES-GCM 加密，审计日志递归脱敏
-- **SSRF 防护**：HTTP 目标保存前执行私网/回环地址检查
-- **建议**：管理后台额外使用 Cloudflare Access 保护
+- Agent 密钥只返回一次，D1 仅保存 SHA-256 摘要。
+- 通知渠道配置使用 AES-GCM 加密。
+- 管理操作使用三级 RBAC 并写入脱敏审计日志。
+- HTTP 探测目标保存前执行私网和回环地址检查。
+- 建议使用 Cloudflare Access 对 `/admin` 增加额外保护。
 
-## 📖 文档
+## 文档
 
 | 文档 | 说明 |
 |:---|:---|
-| [部署指南](docs/部署运维文档.md) | 生产环境部署全流程 |
-| [架构设计](docs/架构设计文档.md) | 系统架构与 ADR |
+| [小白部署指南](docs/小白部署指南.md) | 纯网页生产部署 |
+| [部署运维文档](docs/部署运维文档.md) | 开发者部署、备份和排障 |
+| [架构设计](docs/架构设计文档.md) | 单 Worker 与 VPS Agent 架构 |
+| [环境变量](docs/环境变量与配置指南.md) | 本地与生产配置边界 |
 | [数据库设计](docs/数据库设计文档.md) | D1 Schema 与迁移 |
-| [前端功能](docs/前端功能和交互设计文档.md) | 状态页功能与交互 |
-| [管理后台](docs/管理后台功能和设计文档.md) | 后台功能与设计 |
-| [UI 规范](docs/UI视觉与交互规范文档.md) | 主题系统与组件规范 |
-| [环境变量](docs/环境变量与配置指南.md) | 配置项说明 |
+| [管理后台](docs/管理后台功能和设计文档.md) | 后台功能与交互 |
 
-## 🧪 质量
+## 质量检查
 
 ```bash
-pnpm test        # TypeScript / Workers 测试 + Go Agent 测试
-pnpm typecheck   # TypeScript 类型检查
-pnpm lint        # ESLint + go vet
-pnpm build       # 全量构建
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
 ```
 
-## 🤝 参与贡献
+## 协议
 
-欢迎 Issue 和 Pull Request！在提交 PR 前请确保：
-
-- `pnpm test` 全部通过
-- 新功能附带对应测试用例（项目遵循 TDD）
-- 代码风格与现有项目一致
-
-## 📄 协议
-
-[MIT](LICENSE) — 自由使用、修改和分发。
-
-## ⭐ Star History
-
-如果你喜欢这个项目，请给一个 Star 支持！
-
----
-
-<p align="center">
-  <sub>Built with ❤️ on Cloudflare Workers</sub>
-</p>
+[MIT](LICENSE) — 欢迎使用、修改、Issue 和 Pull Request。

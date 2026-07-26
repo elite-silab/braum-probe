@@ -28,13 +28,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: TypeCheck
-        run: pnpm typecheck || true
+        run: pnpm typecheck
 
       - name: Lint
-        run: pnpm lint || true
+        run: pnpm lint
 
-      - name: Build Workers
-        run: cd apps/api && pnpm build
+      - name: Test
+        run: pnpm test
 
-      - name: Build Web
-        run: cd apps/web && pnpm build
+      - name: Build single Worker and Agent
+        run: pnpm build

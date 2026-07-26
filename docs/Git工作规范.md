@@ -9,9 +9,11 @@
 项目采用单一 monorepo，Workers 后端、前端展示页、管理后台、D1 数据库迁移、部署配置和文档统一版本管理：
 
 ```text
-apps/web/              # Astro SSR 前端与管理后台（部署到 Cloudflare Web Worker）
-apps/api/              # Cloudflare Workers 后端（探针引擎 + API）
+apps/web/              # Next.js App Router 前端与管理后台
+apps/api/              # Hono API、Cron 与探针控制面
 apps/api/migrations/   # Cloudflare D1 迁移脚本
+worker.ts              # Next.js + Hono + Cron 单 Worker 入口
+wrangler.jsonc         # 唯一 Cloudflare 配置
 docs/                  # 产品和工程文档
 ```
 
@@ -111,7 +113,7 @@ fix(alert): suppress duplicate notifications within cooldown window
 - 提交必须保持工作区可构建；不要提交调试日志、临时绕过或已知失败测试。
 - Workers API 变化应在同一提交中包含路由定义、handler 实现和前端消费方修改。
 - D1 schema 变化应包含 migration 文件、类型定义和相关测试。
-- `wrangler.toml` 配置变化应同步更新 `.env.example` 和部署文档。
+- `wrangler.jsonc` 配置变化应同步更新 `.env.example` 和部署文档。
 - 不把无关格式化与业务修改混在一起。
 
 ## 5. Pull Request 规范
@@ -203,7 +205,7 @@ tmp/
 
 - [ ] 变更范围聚焦，PR 描述说明了风险和回滚。
 - [ ] 没有调试代码、临时注释、秘密或用户隐私数据。
-- [ ] 文档、D1 migration、`wrangler.toml` 和实现保持一致。
+- [ ] 文档、D1 migration、`wrangler.jsonc` 和实现保持一致。
 - [ ] 新行为有测试，修复包含可复现问题的回归测试。
 - [ ] 日志不包含 Authorization、Cookie、密码或一次性 token。
 
@@ -215,27 +217,27 @@ tmp/
 - [ ] 写接口考虑鉴权、幂等、限流、审计日志和 KV 缓存失效。
 - [ ] Cron Trigger 处理逻辑有超时保护和错误兜底。
 
-### 前端（Web Worker）
+### 前端（Next.js）
 
 - [ ] lint、类型检查、单元测试和生产构建通过。
 - [ ] 页面元数据、键盘操作、焦点状态、错误/空/加载状态完整。
 - [ ] UI 变化附桌面和移动端截图。
-- [ ] Astro SSR 构建、Worker 部署和 API 地址配置保持一致。
+- [ ] Next.js 与 OpenNext 生产构建通过，页面和 API 保持同源。
 
 ### D1 与部署
 
 - [ ] D1 migration 在空库与升级路径通过（`wrangler d1 migrations apply --local`）。
 - [ ] 索引覆盖主要查询路径，使用 `EXPLAIN QUERY PLAN` 验证。
 - [ ] 新增本地变量已记录到 `.env.example`；新增生产 Secret 已记录到配置与部署文档。
-- [ ] `wrangler.toml` 默认/生产配置与部署文档保持同步。
+- [ ] 根目录 `wrangler.jsonc` 与部署文档保持同步，仓库没有第二份 Wrangler 配置。
 - [ ] 部署和回滚不依赖不可逆的 schema 删除。
 
 ## 10. Release 与 hotfix
 
 - 合并 `main` 后由 CI 执行检查、类型检查和构建；Cloudflare Git 集成负责部署。
-- 生产发布由 Cloudflare Workers Git 集成执行 API/Web Worker 部署和 D1 migration。
+- 生产发布由 Cloudflare Workers Git 集成执行单 Worker 部署和 D1 migration。
 - hotfix 从当前生产标签创建，合并回 `main` 后正常发布，不维护独立长期分支。
-- API 与 Web Worker 回滚均使用对应 Worker 的 `wrangler versions rollback`，秒级全球生效。
+- 应用回滚使用 `braum-probe` 的 `wrangler versions rollback`，秒级全球生效。
 - D1 回滚优先使用 Time Travel（30 天），避免执行高风险 down migration。
 
 ## 11. 当前项目初始化
@@ -243,7 +245,7 @@ tmp/
 当前文档目录尚未初始化 Git。开始编码时按以下顺序建立基线：
 
 1. 确认本目录作为 monorepo 根目录，移除无用系统文件并添加根 `.gitignore`。
-2. `git init`，创建 `main`，加入文档基线、`wrangler.toml` 骨架和目录说明。
+2. `git init`，创建 `main`，加入文档基线、`wrangler.jsonc` 骨架和目录说明。
 3. 运行文档一致性检查后创建首个 `docs: establish MVP baseline` 提交。
 4. 配置远端（GitHub）、分支保护和 CI 后，再开始业务功能分支。
-5. 创建 Cloudflare D1 / KV 资源（参考《部署运维文档》），将绑定 ID 填入 `wrangler.toml`。
+5. 创建 Cloudflare D1 / KV 资源（参考《部署运维文档》），将绑定 ID 填入 `wrangler.jsonc`。

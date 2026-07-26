@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — Toast 通知组件
 import { useState, useEffect, useCallback } from 'react'
 

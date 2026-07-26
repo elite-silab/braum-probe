@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "braum-probe",
+  "main": "worker.ts",
+  "compatibility_date": "2026-07-26",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./apps/web/.open-next/assets"
+  },
+  "vars": {
+    "APP_VERSION": "0.1.0",
+    "AGENT_API_URL": "https://braum-probe.codeelite.workers.dev",
+    "AGENT_RELEASE_BASE_URL": "https://github.com/elite-silab/braum-probe/releases/latest/download"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "braum-production",
+      "database_id": "e29b2f97-aab9-4b97-976c-469076528cf9",
+      "migrations_dir": "apps/api/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "f0557966b8904cbba7c1fa32817df690"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "*/2 * * * *",
+      "* * * * *",
+      "0 * * * *",
+      "0 2 * * *",
+      "0 3 * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

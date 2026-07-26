@@ -3,7 +3,6 @@ import worker from '../index'
 
 const env = {
   APP_VERSION: 'test',
-  CORS_ORIGINS: 'https://status.example.com',
   CACHE: { get: async () => null, put: async () => undefined },
 }
 
@@ -21,27 +20,5 @@ describe('public API method boundary', () => {
     }), env as any, {} as any)
 
     expect(res.status).toBe(405)
-  })
-})
-
-describe('CORS origin allowlist', () => {
-  it('仅为配置的前端 Origin 返回 CORS header', async () => {
-    const allowed = await worker.fetch(new Request('http://localhost/health', {
-      method: 'OPTIONS',
-      headers: {
-        Origin: 'https://status.example.com',
-        'Access-Control-Request-Method': 'GET',
-      },
-    }), env as any, {} as any)
-    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://status.example.com')
-
-    const blocked = await worker.fetch(new Request('http://localhost/health', {
-      method: 'OPTIONS',
-      headers: {
-        Origin: 'https://evil.example.com',
-        'Access-Control-Request-Method': 'GET',
-      },
-    }), env as any, {} as any)
-    expect(blocked.headers.get('Access-Control-Allow-Origin')).toBeNull()
   })
 })

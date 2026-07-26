@@ -1,10 +1,12 @@
+'use client'
+
 // Braum 布隆 CF 探针 — Dashboard 仪表盘（核心 React Island）
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import GlobalStats from './GlobalStats'
 import NodeCard from './NodeCard'
 
-const API_BASE = (import.meta as any).env?.PUBLIC_API_URL || 'http://localhost:8787'
+const API_BASE = ''
 const REFRESH_INTERVAL = 30_000
 
 interface NodeData {

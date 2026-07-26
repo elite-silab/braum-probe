@@ -54,11 +54,13 @@ chore: 构建/工具链
 
 ```
 apps/
-├── api/          # Cloudflare Worker / Hono（TypeScript）
+├── api/          # Hono API、Cron 与 D1 migrations
 ├── agent/        # VPS Agent（Go）
-└── web/          # Astro + React 前端
+└── web/          # Next.js App Router 前端
 packages/
 └── shared/       # 跨层共享类型
+worker.ts         # 单 Cloudflare Worker 入口
+wrangler.jsonc    # 单 Worker 配置
 ```
 
 ## 开发环境
@@ -71,7 +73,7 @@ pnpm install
 cp .env.example .env
 # 编辑 .env 填入本地配置
 
-# 自动初始化数据库并启动开发服务器（API + Web 并行）
+# 自动初始化数据库并启动完整的 Next.js + Hono 开发服务器
 pnpm dev
 ```
 

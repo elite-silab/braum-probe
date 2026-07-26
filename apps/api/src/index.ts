@@ -1,7 +1,6 @@
 // Braum 布隆 CF 探针 — Workers 入口
 
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { createMiddleware } from 'hono/factory'
 import { secureHeaders } from 'hono/secure-headers'
@@ -37,18 +36,6 @@ const publicReadOnly = createMiddleware<{ Bindings: Env }>(async (c, next) => {
 // ============================================
 app.use('*', logger())
 app.use('*', secureHeaders())
-app.use('*', cors({
-  origin: (origin, c) => {
-    const allowedOrigins = (c.env.CORS_ORIGINS || '')
-      .split(',')
-      .map((value: string) => value.trim())
-      .filter(Boolean)
-    return allowedOrigins.includes(origin) ? origin : undefined
-  },
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400,
-}))
 
 // ============================================
 // 健康检查（无需鉴权）

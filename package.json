@@ -7,17 +7,16 @@
   "packageManager": "pnpm@11.17.0",
   "scripts": {
     "predev": "pnpm db:migrate",
-    "dev": "pnpm --filter @braum/api --filter @braum/web dev",
-    "dev:worker": "pnpm --filter @braum/api dev",
-    "dev:web": "pnpm --filter @braum/web dev",
-    "build": "pnpm --filter @braum/shared build && pnpm --filter @braum/api --filter @braum/web build && pnpm agent:build",
+    "dev": "pnpm --filter @braum/web dev",
+    "build": "pnpm --filter @braum/shared build && pnpm --filter @braum/web build:worker && pnpm agent:build",
+    "deploy": "pnpm --filter @braum/web deploy:full",
     "lint": "eslint . && pnpm agent:vet",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test && pnpm agent:test",
     "agent:test": "cd apps/agent && GOCACHE=${GOCACHE:-/tmp/braum-go-cache} go test ./...",
     "agent:vet": "cd apps/agent && GOCACHE=${GOCACHE:-/tmp/braum-go-cache} go vet ./...",
     "agent:build": "mkdir -p dist/agent && cd apps/agent && GOCACHE=${GOCACHE:-/tmp/braum-go-cache} go build -trimpath -o ../../dist/agent/braum-agent ./cmd/braum-agent",
-    "db:migrate": "pnpm --dir apps/api exec wrangler d1 migrations apply DB --local --config wrangler.toml"
+    "db:migrate": "pnpm exec wrangler d1 migrations apply DB --local --config wrangler.jsonc"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -25,11 +24,10 @@
     "@types/node": "^20.0.0",
     "better-sqlite3": "^13.0.1",
     "eslint": "^9.0.0",
-    "eslint-plugin-astro": "^1.0.0",
     "prettier": "^3.0.0",
-    "prettier-plugin-astro": "^0.14.0",
     "typescript": "^5.8.0",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.0.0",
+    "wrangler": "^4.114.0"
   },
   "engines": {
     "node": ">=22.12.0",

@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 目标管理组件
 import { useState, useEffect } from 'react'
 import { adminApi } from '../../lib/api'

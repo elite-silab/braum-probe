@@ -1,3 +1,5 @@
+'use client'
+
 // Braum 布隆 CF 探针 — 管理后台侧边栏
 import { useState, useEffect } from 'react'
 

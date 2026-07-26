@@ -8,9 +8,8 @@ export interface Env {
   // KV 命名空间绑定
   CACHE: KVNamespace
 
-  // Variables (wrangler.toml [vars])
+  // Variables (wrangler.jsonc vars)
   APP_VERSION: string
-  CORS_ORIGINS: string
   AGENT_API_URL: string
   AGENT_RELEASE_BASE_URL: string
 

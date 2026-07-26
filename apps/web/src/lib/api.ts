@@ -184,6 +184,9 @@ export const adminApi = {
   updateAlertChannel: (id: string, data: unknown) => request<unknown>(`${ADMIN_API_BASE}/alerts/channels/${id}`, {
     method: 'PUT', body: JSON.stringify(data), headers: authHeaders(),
   }),
+  testAlertChannel: (id: string) => request<{ sent: boolean }>(`${ADMIN_API_BASE}/alerts/channels/${id}/test`, {
+    method: 'POST', headers: authHeaders(),
+  }),
   deleteAlertChannel: (id: string) => request<unknown>(`${ADMIN_API_BASE}/alerts/channels/${id}`, {
     method: 'DELETE', headers: authHeaders(),
   }),

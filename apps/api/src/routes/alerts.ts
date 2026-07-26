@@ -6,6 +6,8 @@ import { success, paginated, notFound, badRequest } from '../utils/response'
 import { writeAuditLog } from '../utils/audit'
 import { decryptConfig, encryptConfig } from '../utils/encryption'
 import { parsePublicHttpUrl } from '../utils/outbound'
+import { sendTelegram, type TelegramConfig } from '../notifications/telegram'
+import { sendWebhook, type WebhookConfig } from '../notifications/webhook'
 
 export const alertRoutes = new Hono<{ Bindings: Env }>()
 
@@ -16,6 +18,44 @@ const ALERT_METRICS = new Set([
 const ALERT_OPERATORS = new Set(['>', '<', '>=', '<=', '=='])
 const ALERT_SCOPES = new Set(['all', 'nodes', 'groups', 'regions'])
 const ALERT_CHANNEL_TYPES = new Set(['telegram', 'webhook'])
+
+interface StoredAlertChannel extends Record<string, unknown> {
+  id: string
+  name: string
+  channel_type: string
+  config: string
+}
+
+async function publicAlertChannel(channel: StoredAlertChannel, env: Env) {
+  const { config: encryptedConfig, ...publicFields } = channel
+  const config = await decryptConfig(encryptedConfig || '{}', env.ENCRYPTION_KEY)
+
+  if (channel.channel_type === 'telegram') {
+    return {
+      ...publicFields,
+      config: {
+        chat_id: typeof config.chat_id === 'string' ? config.chat_id : '',
+        bot_token_configured: Boolean(config.bot_token || env.TELEGRAM_BOT_TOKEN),
+      },
+    }
+  }
+
+  return {
+    ...publicFields,
+    config: {
+      url_configured: typeof config.url === 'string' && config.url.length > 0,
+    },
+  }
+}
+
+function channelAuditChanges(body: Record<string, unknown>) {
+  return {
+    ...(body.name !== undefined ? { name: body.name } : {}),
+    ...(body.channel_type !== undefined ? { channel_type: body.channel_type } : {}),
+    ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),
+    ...(body.config !== undefined ? { config_changed: true } : {}),
+  }
+}
 
 function validateChannel(type: unknown, config: unknown): string | null {
   if (!ALERT_CHANNEL_TYPES.has(String(type))) return 'Invalid channel_type'
@@ -165,8 +205,11 @@ alertRoutes.delete('/rules/:id', async (c) => {
 
 // GET /api/v1/alerts/channels — 通知渠道列表
 alertRoutes.get('/channels', async (c) => {
-  const channels = await c.env.DB.prepare('SELECT id, name, channel_type, enabled, created_at, updated_at FROM alert_channels ORDER BY created_at DESC').all()
-  return c.json(success(channels.results || []))
+  const channels = await c.env.DB.prepare('SELECT id, name, channel_type, config, enabled, created_at, updated_at FROM alert_channels ORDER BY created_at DESC').all()
+  const results = await Promise.all((channels.results || []).map(channel =>
+    publicAlertChannel(channel as StoredAlertChannel, c.env)
+  ))
+  return c.json(success(results))
 })
 
 // POST /api/v1/alerts/channels — 创建通知渠道
@@ -197,11 +240,48 @@ alertRoutes.post('/channels', async (c) => {
     action: 'create',
     object_type: 'alert_channel',
     object_id: id,
-    changes: body,
+    changes: channelAuditChanges(body),
     ip_address: c.req.header('CF-Connecting-IP'),
   })
 
   return c.json(success({ id, name: name.trim(), channel_type, enabled: enabled !== false }), 201)
+})
+
+// POST /api/v1/alerts/channels/:id/test — 使用已保存配置发送测试消息
+alertRoutes.post('/channels/:id/test', async (c) => {
+  const id = c.req.param('id')
+  const channel = await c.env.DB.prepare(
+    'SELECT id, name, channel_type, config FROM alert_channels WHERE id = ?'
+  ).bind(id).first() as StoredAlertChannel | null
+  if (!channel) return c.json(notFound('Alert channel not found'), 404)
+
+  try {
+    const config = await decryptConfig(channel.config || '{}', c.env.ENCRYPTION_KEY)
+    const message = `✅ 通知渠道「${channel.name}」测试成功\n\n如果你看到这条消息，说明 Braum 已经可以通过此渠道发送告警。`
+
+    if (channel.channel_type === 'telegram') {
+      const validationError = validateChannel('telegram', config)
+      if (validationError) throw new Error(validationError)
+      await sendTelegram(c.env, config as TelegramConfig, message)
+    } else if (channel.channel_type === 'webhook') {
+      const validationError = validateChannel('webhook', config)
+      if (validationError) throw new Error(validationError)
+      await sendWebhook(config as WebhookConfig, message, 'test')
+    } else {
+      return c.json(badRequest('Unsupported channel type'), 400)
+    }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown error'
+    console.error(JSON.stringify({
+      event: 'notification_test_error',
+      channel_id: id,
+      channel_type: channel.channel_type,
+      error: reason,
+    }))
+    return c.json(badRequest(`测试消息发送失败：${reason}`), 400)
+  }
+
+  return c.json(success({ sent: true }))
 })
 
 // PUT /api/v1/alerts/channels/:id — 更新通知渠道
@@ -251,7 +331,7 @@ alertRoutes.put('/channels/:id', async (c) => {
     action: 'update',
     object_type: 'alert_channel',
     object_id: id,
-    changes: body,
+    changes: channelAuditChanges(body),
     ip_address: c.req.header('CF-Connecting-IP'),
   })
 

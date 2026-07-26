@@ -65,6 +65,11 @@ export interface AlertChannel {
   id: string
   name: string
   channel_type: AlertChannelType
+  config?: {
+    chat_id?: string
+    bot_token_configured?: boolean
+    url_configured?: boolean
+  }
   enabled: boolean
   created_at: string
   updated_at: string

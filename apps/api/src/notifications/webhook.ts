@@ -11,7 +11,7 @@ export interface WebhookConfig extends Record<string, unknown> {
 /**
  * 通过 HTTP Webhook 发送告警
  */
-export async function sendWebhook(config: WebhookConfig, message: string): Promise<void> {
+export async function sendWebhook(config: WebhookConfig, message: string, event: 'alert' | 'test' = 'alert'): Promise<void> {
   if (!config.url) {
     throw new Error('Webhook URL not configured')
   }
@@ -26,7 +26,7 @@ export async function sendWebhook(config: WebhookConfig, message: string): Promi
 
   const payload = {
     source: 'braum-probe',
-    event: 'alert',
+    event,
     message,
     timestamp: new Date().toISOString(),
   }

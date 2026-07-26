@@ -25,6 +25,11 @@ interface AlertChannel {
   channel_type: string
   enabled: boolean
   created_at: string
+  config?: {
+    chat_id?: string
+    bot_token_configured?: boolean
+    url_configured?: boolean
+  }
 }
 
 const RULE_TEMPLATES = [
@@ -44,6 +49,7 @@ export default function AlertManager() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
   const [editingChannel, setEditingChannel] = useState<AlertChannel | null>(null)
+  const [testingChannelId, setTestingChannelId] = useState<string | null>(null)
   const [deletingItem, setDeletingItem] = useState<{ type: 'rule' | 'channel'; id: string; name: string } | null>(null)
 
   const [ruleForm, setRuleForm] = useState({
@@ -121,7 +127,7 @@ export default function AlertManager() {
       name: channel.name,
       channel_type: channel.channel_type,
       bot_token: '',
-      chat_id: '',
+      chat_id: channel.config?.chat_id || '',
       webhook_url: '',
       enabled: channel.enabled,
     })
@@ -230,6 +236,23 @@ export default function AlertManager() {
     }
   }
 
+  async function handleTestChannel(channel: AlertChannel) {
+    if (testingChannelId) return
+    setTestingChannelId(channel.id)
+    try {
+      const res = await adminApi.testAlertChannel(channel.id)
+      if (res.success) {
+        showToast(`测试消息已发送到「${channel.name}」`, 'success')
+      } else {
+        showToast(res.error || '测试消息发送失败', 'error')
+      }
+    } catch (e) {
+      showToast('测试消息发送失败', 'error')
+    } finally {
+      setTestingChannelId(null)
+    }
+  }
+
   const ruleColumns = [
     { key: 'name', label: '名称' },
     {
@@ -304,7 +327,14 @@ export default function AlertManager() {
       key: 'actions',
       label: '操作',
       render: (_: unknown, row: Record<string, unknown>) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={testingChannelId !== null}
+            onClick={(e: any) => { e.stopPropagation(); handleTestChannel(row as unknown as AlertChannel) }}
+            className="text-emerald-600 hover:text-emerald-700 disabled:cursor-wait disabled:opacity-50 dark:text-emerald-400"
+          >
+            {testingChannelId === String(row.id) ? '发送中…' : '发送测试消息'}
+          </button>
           <button onClick={(e: any) => { e.stopPropagation(); handleEditChannel(row as unknown as AlertChannel) }} className="text-brand-600 hover:text-brand-700 dark:text-brand-400">编辑</button>
           <button onClick={(e: any) => { e.stopPropagation(); handleDelete('channel', String(row.id), String(row.name)) }} className="text-red-600 hover:text-red-700 dark:text-red-400">删除</button>
         </div>
@@ -467,7 +497,10 @@ export default function AlertManager() {
               {channelForm.channel_type === 'telegram' ? (
                 <>
                   <FormField label="Chat ID" name="telegram-chat-id" autoComplete="off" required={!editingChannel} value={channelForm.chat_id} onChange={(e: any) => setChannelForm({ ...channelForm, chat_id: e.target.value })} placeholder="例如：-1001234567890" />
-                  <FormField label="Bot Token" name="telegram-bot-token" autoComplete="new-password" type="password" value={channelForm.bot_token} onChange={(e: any) => setChannelForm({ ...channelForm, bot_token: e.target.value })} placeholder={editingChannel ? '留空表示保持不变' : '若已配置 TELEGRAM_BOT_TOKEN 可留空'} />
+                  <FormField label="Bot Token" name="telegram-bot-token" autoComplete="new-password" type="password" value={channelForm.bot_token} onChange={(e: any) => setChannelForm({ ...channelForm, bot_token: e.target.value })} placeholder={editingChannel?.config?.bot_token_configured ? '已安全保存；留空表示保持不变' : editingChannel ? '尚未配置，请填写 Bot Token' : '若已配置 TELEGRAM_BOT_TOKEN 可留空'} />
+                  {editingChannel?.config?.bot_token_configured && (
+                    <p className="-mt-2 text-xs text-emerald-600 dark:text-emerald-400">Bot Token 已加密保存。出于安全考虑不显示原值，只有更换时才需要重新填写。</p>
+                  )}
                 </>
               ) : (
                 <FormField label="Webhook URL" name="notification-webhook-url" autoComplete="off" type="url" required={!editingChannel} value={channelForm.webhook_url} onChange={(e: any) => setChannelForm({ ...channelForm, webhook_url: e.target.value })} placeholder={editingChannel ? '留空表示保持不变' : 'https://example.com/webhook'} />

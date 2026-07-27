@@ -136,7 +136,7 @@ export default function NodeCard(props: NodeCardProps) {
 
   if (props.variant === 'compact') {
     return (
-      <a href={`/node/${props.id}`} className="group block rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900/80 dark:hover:border-brand-700">
+      <a href={`/node/${props.id}`} className="group block min-w-0 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900/80 dark:hover:border-brand-700">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{props.name}</h3>
@@ -164,16 +164,16 @@ export default function NodeCard(props: NodeCardProps) {
               <CompactMetric label="内存" value={`${memory.toFixed(1)}%`} alert={memory} />
               <CompactMetric label="磁盘" value={`${disk.toFixed(1)}%`} alert={disk} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
-              <div className="min-w-0">
-                <p className="text-[10px] text-slate-400">实时网络</p>
-                <p className="mt-0.5 truncate font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+            <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <p className="shrink-0 text-[10px] text-slate-400">实时网络</p>
+                <p className="min-w-0 break-words text-right font-mono text-[11px] font-semibold leading-4 text-slate-700 dark:text-slate-200">
                   ↑{formatTransferRate(metrics.network_tx_bytes_per_second)} · ↓{formatTransferRate(metrics.network_rx_bytes_per_second)}
                 </p>
               </div>
-              <div className="min-w-0 text-right">
-                <p className="text-[10px] text-slate-400">运行时间</p>
-                <p className="mt-0.5 truncate font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <p className="shrink-0 text-[10px] text-slate-400">运行时间</p>
+                <p className="min-w-0 break-words text-right font-mono text-[11px] font-semibold leading-4 text-slate-700 dark:text-slate-200">
                   {formatDuration(metrics.uptime_seconds)}
                 </p>
               </div>
@@ -185,8 +185,8 @@ export default function NodeCard(props: NodeCardProps) {
           </div>
         )}
 
-        <div className="mt-3 flex items-center justify-between gap-3 text-[10px] text-slate-400">
-          <span className="truncate">{metrics ? ageLabel(metrics.collected_at) : '尚未采集'}</span>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[10px] text-slate-400">
+          <span>{metrics ? ageLabel(metrics.collected_at) : '尚未采集'}</span>
           <span className="shrink-0 font-mono">{props.avgLatency == null ? '--' : `${Math.round(props.avgLatency)}ms`}</span>
         </div>
       </a>

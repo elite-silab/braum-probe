@@ -456,7 +456,7 @@ export default function Dashboard() {
 
         {/* 节点卡片网格 */}
         {sorted.length > 0 ? (
-          <div className={`grid ${nodeViewMode === 'compact' ? 'gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'gap-4 sm:grid-cols-2 lg:grid-cols-3'}`}>
+          <div className={`grid ${nodeViewMode === 'compact' ? 'gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'gap-4 sm:grid-cols-2 lg:grid-cols-3'}`}>
             {sorted.map(n => (
               <NodeCard
                 key={n.id}

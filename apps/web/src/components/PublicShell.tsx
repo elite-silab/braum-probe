@@ -6,7 +6,6 @@ import ThemeSwitcher from './ThemeSwitcher'
 
 const navItems = [
   { href: '/', label: '总览', icon: '📊', match: (path: string) => path === '/' },
-  { href: '/map', label: '节点', icon: '🗺️', match: (path: string) => path.startsWith('/map') || path.startsWith('/node') },
   { href: '/history', label: '历史', icon: '📈', match: (path: string) => path.startsWith('/history') },
   { href: '/incidents', label: '公告', icon: '📢', match: (path: string) => path.startsWith('/incidents') },
 ]

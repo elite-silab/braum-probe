@@ -351,16 +351,21 @@ export default function Dashboard() {
         />
       )}
 
-      {/* 节点区域 */}
-      <section className="mt-10">
+      {/* 节点目录 */}
+      <section id="nodes" className="scroll-mt-24 mt-10" aria-labelledby="node-directory-title">
         {/* 工具栏：刷新 + 筛选 + 排序 */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-            VPS 节点
-            <span className="ml-2 text-sm font-normal text-slate-400">
-              ({filtered.length}/{nodes.length})
-            </span>
-          </h2>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="node-directory-title" className="text-xl font-semibold text-slate-900 dark:text-white">
+              节点目录
+              <span className="ml-2 text-sm font-normal text-slate-400">
+                ({filtered.length}/{nodes.length})
+              </span>
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              直接查看每台 VPS 的系统、资源、流量、实时网速与运行时间。
+            </p>
+          </div>
 
           <div className="grid w-full grid-cols-4 gap-2 sm:flex sm:w-auto sm:items-center">
             {/* 最后更新 */}

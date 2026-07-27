@@ -1,0 +1,20 @@
+name: Web Release
+
+on:
+  push:
+    tags:
+      - 'web-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish website release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v3
+        with:
+          name: Braum Web ${{ github.ref_name }}
+          make_latest: true
+          generate_release_notes: true

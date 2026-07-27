@@ -3,13 +3,13 @@ name: Agent Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'agent-v*'
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号（例如 v0.1.0）'
+        description: 'Agent 版本号（例如 agent-v0.1.1）'
         required: true
-        default: 'v0.1.0'
+        default: 'agent-v0.1.1'
 
 permissions:
   contents: write
@@ -38,7 +38,7 @@ jobs:
           CGO_ENABLED: '0'
           RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
         run: |
-          VERSION="${RELEASE_TAG#v}"
+          VERSION="${RELEASE_TAG#agent-v}"
           go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "braum-agent_linux_${GOARCH}" ./cmd/braum-agent
           sha256sum "braum-agent_linux_${GOARCH}" > "braum-agent_linux_${GOARCH}.sha256"
       - uses: actions/upload-artifact@v5
@@ -60,4 +60,7 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          name: Braum Agent ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          make_latest: false
+          generate_release_notes: true
           files: dist/*

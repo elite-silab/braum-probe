@@ -11,7 +11,7 @@
   "vars": {
     "APP_VERSION": "0.1.0",
     "AGENT_API_URL": "https://braum-probe.codeelite.workers.dev",
-    "AGENT_RELEASE_BASE_URL": "https://github.com/elite-silab/braum-probe/releases/latest/download"
+    "AGENT_RELEASE_BASE_URL": "https://github.com/elite-silab/braum-probe/releases/download/v0.1.0"
   },
   "d1_databases": [
     {

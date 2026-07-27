@@ -36,11 +36,11 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed right-4 top-4 z-[100] space-y-2">
+    <div className="fixed inset-x-4 top-4 z-[100] space-y-2 sm:left-auto sm:w-80">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`rounded-lg px-4 py-3 text-sm text-white shadow-lg transition-all ${
+          className={`break-words rounded-lg px-4 py-3 text-sm text-white shadow-lg transition-all ${
             toast.type === 'success'
               ? 'bg-emerald-600'
               : toast.type === 'error'

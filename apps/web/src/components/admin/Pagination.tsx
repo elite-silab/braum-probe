@@ -11,7 +11,7 @@ export default function Pagination({ page, totalPages, total, onPageChange }: Pa
   if (totalPages <= 1) return null
 
   return (
-    <div className="mt-4 flex items-center justify-between px-4">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-2 sm:px-4">
       <span className="text-sm text-slate-500 dark:text-slate-400">
         第 {page}/{totalPages} 页，共 {total} 条
       </span>

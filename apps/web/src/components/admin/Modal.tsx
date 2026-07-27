@@ -29,12 +29,12 @@ export default function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="fixed inset-0 bg-black/50" />
       <div
-        className="relative z-10 w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800"
+        className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-4 shadow-2xl dark:bg-slate-800 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <h3 className="min-w-0 break-words text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+          <button onClick={onClose} className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="关闭弹窗">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -44,7 +44,7 @@ export default function Modal({
         <div className="text-sm text-slate-600 dark:text-slate-300">{children}</div>
 
         {onConfirm && (
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
             <button
               onClick={onClose}
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700"

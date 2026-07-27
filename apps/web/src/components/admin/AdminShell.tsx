@@ -16,6 +16,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [navigationOpen, setNavigationOpen] = useState(false)
   const [user, setUser] = useState<StoredUser>({})
 
   useEffect(() => {
@@ -55,14 +56,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--surface-body)' }}>
-      <AdminSidebar />
+      <AdminSidebar mobileOpen={navigationOpen} onMobileClose={() => setNavigationOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="theme-header flex h-14 shrink-0 items-center justify-between border-b px-4 sm:px-6">
-          <a href="/admin" className="theme-text-secondary flex items-center gap-2 text-sm font-medium hover:opacity-80">
-            <img src="/logo-icon.svg" alt="Braum" className="h-6 w-6" />
-            管理后台
-          </a>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setNavigationOpen(true)}
+              className="theme-text-secondary -ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg theme-hover md:hidden"
+              aria-label="打开管理导航"
+              aria-expanded={navigationOpen}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <a href="/admin" className="theme-text-secondary flex min-w-0 items-center gap-2 text-sm font-medium hover:opacity-80">
+              <img src="/logo-icon.svg" alt="Braum" className="h-6 w-6 shrink-0" />
+              <span className="truncate">管理后台</span>
+            </a>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <ThemeSwitcher />
             <div className="relative" ref={menuRef}>
               <button
@@ -90,7 +104,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6">{children}</main>
       </div>
     </div>
   )

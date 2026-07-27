@@ -41,8 +41,23 @@ export default function DataTable({ columns, data, loading, emptyText = '暂无�
 
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className="divide-y divide-slate-100 dark:divide-slate-700 md:hidden">
+        {pagedData.map((row, index) => (
+          <div key={index} className="space-y-3 p-4">
+            {columns.map((col) => (
+              <div key={col.key} className={`flex min-w-0 items-start justify-between gap-4 ${col.key === 'actions' ? 'border-t border-slate-100 pt-3 dark:border-slate-700' : ''}`}>
+                <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{col.label}</span>
+                <div className="min-w-0 max-w-[68%] break-words text-right text-sm text-slate-700 dark:text-slate-300 [&>*]:max-w-full">
+                  {col.render ? col.render(row[col.key], row) : String(row[col.key] ?? '--')}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-max text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
             <tr>
               {columns.map((col) => (
@@ -71,7 +86,7 @@ export default function DataTable({ columns, data, loading, emptyText = '暂无�
       </div>
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between px-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 px-2 sm:px-4">
           <span className="text-sm text-slate-500 dark:text-slate-400">
             第 {page}/{totalPages} 页，共 {data.length} 条
           </span>

@@ -94,7 +94,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-2xl border border-brand-200 bg-[linear-gradient(120deg,rgba(59,130,246,.11),rgba(16,185,129,.06))] p-6 dark:border-brand-900/60 dark:bg-[linear-gradient(120deg,rgba(37,99,235,.16),rgba(15,23,42,.4))]">
+      <section className="relative overflow-hidden rounded-2xl border border-brand-200 bg-[linear-gradient(120deg,rgba(59,130,246,.11),rgba(16,185,129,.06))] p-4 dark:border-brand-900/60 dark:bg-[linear-gradient(120deg,rgba(37,99,235,.16),rgba(15,23,42,.4))] sm:p-6">
         <div className="absolute -right-8 -top-12 h-36 w-36 rounded-full border-[24px] border-brand-200/30 dark:border-brand-800/20" />
         <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div>
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">两步完成基础监控</h2>
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">最近节点</h2>
           <a href="/admin/nodes" className="text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">管理全部 →</a>

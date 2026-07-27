@@ -16,11 +16,26 @@ interface Target {
   expected_status: number
   timeout_ms: number
   status: 'active' | 'paused'
+  assigned_node_count?: number
   created_at: string
+}
+
+interface NodeOption {
+  id: string
+  name: string
+  status: string
+  registration_status?: 'pending' | 'registered'
+}
+
+interface CreatedTarget {
+  id: string
+  name: string
+  address: string
 }
 
 export default function TargetManager() {
   const [targets, setTargets] = useState<Target[]>([])
+  const [nodes, setNodes] = useState<NodeOption[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -29,6 +44,9 @@ export default function TargetManager() {
   const [editingTarget, setEditingTarget] = useState<Target | null>(null)
   const [deletingTarget, setDeletingTarget] = useState<Target | null>(null)
   const [saving, setSaving] = useState(false)
+  const [assignmentTarget, setAssignmentTarget] = useState<CreatedTarget | null>(null)
+  const [assignmentNodeIds, setAssignmentNodeIds] = useState<string[]>([])
+  const [assignmentSaving, setAssignmentSaving] = useState(false)
   const [form, setForm] = useState({
     name: '',
     target_type: 'http',
@@ -40,7 +58,16 @@ export default function TargetManager() {
 
   useEffect(() => {
     loadTargets()
+    loadNodes()
   }, [])
+
+  async function loadNodes() {
+    const res = await adminApi.getNodes()
+    if (res.success && res.data) {
+      const results = (res.data as any).results || res.data
+      setNodes(Array.isArray(results) ? results : [])
+    }
+  }
 
   async function loadTargets() {
     setLoading(true)
@@ -57,12 +84,15 @@ export default function TargetManager() {
   }
 
   function handleCreate() {
+    setAssignmentTarget(null)
+    setAssignmentNodeIds([])
     setEditingTarget(null)
     setForm({ name: '', target_type: 'http', address: '', expected_status: 200, timeout_ms: 5000, status: 'active' })
     setModalOpen(true)
   }
 
   function handleEdit(target: Target) {
+    setAssignmentTarget(null)
     setEditingTarget(target)
     setForm({
       name: target.name,
@@ -107,7 +137,13 @@ export default function TargetManager() {
         if (res.success) {
           showToast('目标创建成功', 'success')
           await loadTargets()
-          setModalOpen(false)
+          const created = res.data as CreatedTarget | undefined
+          if (created?.id && nodes.length > 0) {
+            setAssignmentTarget(created)
+            setAssignmentNodeIds([])
+          } else {
+            setModalOpen(false)
+          }
         } else {
           showToast(res.error || '创建失败', 'error')
         }
@@ -116,6 +152,29 @@ export default function TargetManager() {
       showToast('操作失败', 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleAssignmentSubmit() {
+    if (!assignmentTarget) return
+    setAssignmentSaving(true)
+    try {
+      const res = await adminApi.updateTargetAssignments(assignmentTarget.id, assignmentNodeIds)
+      if (!res.success) {
+        showToast(res.error || '节点分配失败', 'error')
+        return
+      }
+      showToast(
+        assignmentNodeIds.length > 0 ? `已分配到 ${assignmentNodeIds.length} 个节点` : '目标已保存，暂未分配节点',
+        'success',
+      )
+      setAssignmentTarget(null)
+      setModalOpen(false)
+      await loadTargets()
+    } catch {
+      showToast('节点分配失败，请稍后重试', 'error')
+    } finally {
+      setAssignmentSaving(false)
     }
   }
 
@@ -163,6 +222,16 @@ export default function TargetManager() {
           {String(value)}
         </span>
       ),
+    },
+    {
+      key: 'assigned_node_count',
+      label: '分配状态',
+      render: (value: unknown) => {
+        const count = Number(value || 0)
+        return count > 0
+          ? <span className="text-emerald-600 dark:text-emerald-400">已分配 {count} 个节点</span>
+          : <span className="font-medium text-amber-600 dark:text-amber-400">未分配节点</span>
+      },
     },
     {
       key: 'status',
@@ -214,9 +283,22 @@ export default function TargetManager() {
     <>
       <ToastContainer />
 
-      <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
-        <p className="font-semibold">网络探测是可选功能</p>
-        <p className="mt-1 text-xs leading-5 text-blue-700 dark:text-blue-300">服务器资源监控不依赖探测目标。需要监控网站或 DNS 时，只填地址即可，其余参数已有适合多数场景的默认值。</p>
+      <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">?</span>
+          <div>
+            <p className="font-semibold">网络探测是可选的“从 VPS 出发的访问检查”</p>
+            <p className="mt-1 text-xs leading-5 text-blue-800 dark:text-blue-200">它不影响 CPU、内存、磁盘和流量监控。创建目标后，还要分配给至少一个节点，Agent 才会执行检查并产生延迟、状态码和可用率。</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+          {['创建网站或 DNS 目标', '分配给需要检查的节点', '等待第一次检查结果'].map((step, index) => (
+            <div key={step} className="flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 dark:bg-slate-900/30">
+              <span className="font-mono font-semibold text-blue-600 dark:text-blue-300">0{index + 1}</span>
+              <span>{step}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -247,13 +329,45 @@ export default function TargetManager() {
 
       <Modal
         open={modalOpen}
-        title={editingTarget ? '编辑探测' : '添加网络探测'}
-        onClose={() => setModalOpen(false)}
-        onConfirm={handleSubmit}
-        confirmText={saving ? '保存中…' : editingTarget ? '保存修改' : '添加探测'}
-        confirmDisabled={saving || !form.address.trim()}
+        title={assignmentTarget ? '下一步：分配探测节点' : editingTarget ? '编辑网络探测' : '添加网络探测'}
+        onClose={() => { setModalOpen(false); setAssignmentTarget(null) }}
+        onConfirm={assignmentTarget ? handleAssignmentSubmit : handleSubmit}
+        confirmText={assignmentTarget ? (assignmentSaving ? '保存分配…' : '保存节点分配') : (saving ? '保存中…' : editingTarget ? '保存修改' : '创建目标')}
+        confirmDisabled={assignmentTarget ? assignmentSaving : (saving || !form.address.trim())}
         closeOnConfirm={false}
       >
+        {assignmentTarget ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/25">
+              <p className="font-semibold text-emerald-900 dark:text-emerald-100">“{assignmentTarget.name}”已创建</p>
+              <p className="mt-1 break-all text-xs text-emerald-700 dark:text-emerald-300">{assignmentTarget.address}</p>
+            </div>
+            <div>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <p className="font-medium text-slate-800 dark:text-slate-100">选择从哪些节点发起检查</p>
+                <span className="text-xs text-slate-400">已选 {assignmentNodeIds.length} 个</span>
+              </div>
+              <p className="mb-3 text-xs leading-5 text-slate-500 dark:text-slate-400">只会影响选中的 VPS，不会自动分配给所有节点。你也可以先跳过，之后在节点管理中再分配。</p>
+              <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-600">
+                {nodes.map(node => (
+                  <label key={node.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/60">
+                    <input
+                      type="checkbox"
+                      checked={assignmentNodeIds.includes(node.id)}
+                      onChange={event => setAssignmentNodeIds(current => event.target.checked ? [...current, node.id] : current.filter(id => id !== node.id))}
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700 dark:text-slate-200">{node.name}</span>
+                    <span className="shrink-0 text-[10px] text-slate-400">{node.registration_status === 'registered' ? '已安装' : '待安装'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <button type="button" onClick={() => { setAssignmentTarget(null); setModalOpen(false) }} className="text-xs font-medium text-slate-500 underline underline-offset-4 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
+              暂时跳过，稍后再分配
+            </button>
+          </div>
+        ) : (
         <div className="space-y-4">
           <FormField
             as="select"
@@ -274,6 +388,8 @@ export default function TargetManager() {
             placeholder={form.target_type === 'http' ? 'https://example.com' : 'example.com'}
           />
           <p className="-mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">名称会自动使用域名，例如 <code>example.com</code>。</p>
+
+          {!editingTarget && <p className="-mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">创建后会进入“分配节点”步骤。未分配节点的目标不会产生探测结果。</p>}
 
           <details className="group rounded-xl border border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-900/30">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-medium text-slate-700 dark:text-slate-200">
@@ -302,7 +418,9 @@ export default function TargetManager() {
               )}
             </div>
           </details>
+          {editingTarget && <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">需要调整分配节点？请前往“节点管理”编辑对应 VPS。目标本身的参数修改会立即同步。</p>}
         </div>
+        )}
       </Modal>
 
       <Modal

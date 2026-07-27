@@ -153,6 +153,9 @@ export const adminApi = {
   updateTarget: (id: string, data: unknown) => request<unknown>(`${ADMIN_API_BASE}/targets/${id}`, {
     method: 'PUT', body: JSON.stringify(data), headers: authHeaders(),
   }),
+  updateTargetAssignments: (id: string, nodeIds: string[]) => request<unknown>(`${ADMIN_API_BASE}/targets/${id}/assignments`, {
+    method: 'PUT', body: JSON.stringify({ node_ids: nodeIds }), headers: authHeaders(),
+  }),
   deleteTarget: (id: string) => request<unknown>(`${ADMIN_API_BASE}/targets/${id}`, {
     method: 'DELETE', headers: authHeaders(),
   }),

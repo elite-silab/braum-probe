@@ -71,3 +71,75 @@ describe('POST /api/v1/targets', () => {
     expect(db.prepare).not.toHaveBeenCalled()
   })
 })
+
+describe('PUT /api/v1/targets/:id/assignments', () => {
+  it('可以把目标分配给已存在的节点', async () => {
+    const targetChain = {
+      bind: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({ id: 'target-1' }),
+    }
+    const nodeChain = {
+      bind: vi.fn().mockReturnThis(),
+      all: vi.fn().mockResolvedValue({ results: [{ id: 'node-1' }, { id: 'node-2' }] }),
+    }
+    const previousAssignmentsChain = {
+      bind: vi.fn().mockReturnThis(),
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    }
+    const mutationChain = {
+      bind: vi.fn().mockReturnThis(),
+      run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
+    }
+    const db = {
+      prepare: vi.fn()
+        .mockReturnValueOnce(targetChain)
+        .mockReturnValueOnce(previousAssignmentsChain)
+        .mockReturnValueOnce(nodeChain)
+        .mockReturnValue(mutationChain),
+      batch: vi.fn().mockResolvedValue([]),
+    } as unknown as D1Database
+    const app = createApp(db)
+
+    const response = await app.fetch(new Request('http://localhost/api/v1/targets/target-1/assignments', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ node_ids: ['node-1', 'node-2', 'node-1'] }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(db.batch).toHaveBeenCalledOnce()
+    expect((await response.json() as any).data.node_ids).toEqual(['node-1', 'node-2'])
+  })
+
+  it('拒绝不存在的节点', async () => {
+    const targetChain = {
+      bind: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({ id: 'target-1' }),
+    }
+    const nodeChain = {
+      bind: vi.fn().mockReturnThis(),
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    }
+    const previousAssignmentsChain = {
+      bind: vi.fn().mockReturnThis(),
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    }
+    const db = {
+      prepare: vi.fn()
+        .mockReturnValueOnce(targetChain)
+        .mockReturnValueOnce(previousAssignmentsChain)
+        .mockReturnValueOnce(nodeChain),
+      batch: vi.fn(),
+    } as unknown as D1Database
+    const app = createApp(db)
+
+    const response = await app.fetch(new Request('http://localhost/api/v1/targets/target-1/assignments', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ node_ids: ['missing-node'] }),
+    }))
+
+    expect(response.status).toBe(400)
+    expect(db.batch).not.toHaveBeenCalled()
+  })
+})

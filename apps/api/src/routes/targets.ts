@@ -64,7 +64,11 @@ targetRoutes.get('/', async (c) => {
 
   const countResult = await c.env.DB.prepare('SELECT COUNT(*) as total FROM targets').first() as { total: number }
   const targets = await c.env.DB.prepare(
-    'SELECT * FROM targets ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    `SELECT t.*, COUNT(nt.node_id) AS assigned_node_count
+     FROM targets t
+     LEFT JOIN node_targets nt ON nt.target_id = t.id
+     GROUP BY t.id
+     ORDER BY t.created_at DESC LIMIT ? OFFSET ?`
   ).bind(pageSize, offset).all()
 
   return c.json(paginated(targets.results || [], {
@@ -74,9 +78,16 @@ targetRoutes.get('/', async (c) => {
 
 // GET /api/v1/targets/:id — 目标详情
 targetRoutes.get('/:id', async (c) => {
-  const target = await c.env.DB.prepare('SELECT * FROM targets WHERE id = ?').bind(c.req.param('id')).first()
+  const id = c.req.param('id')
+  const target = await c.env.DB.prepare('SELECT * FROM targets WHERE id = ?').bind(id).first()
   if (!target) return c.json(notFound('Target not found'), 404)
-  return c.json(success(target))
+  const assignments = await c.env.DB.prepare(
+    'SELECT node_id FROM node_targets WHERE target_id = ? ORDER BY node_id',
+  ).bind(id).all()
+  return c.json(success({
+    ...(target as Record<string, unknown>),
+    node_ids: (assignments.results || []).map(row => String((row as { node_id: string }).node_id)),
+  }))
 })
 
 // POST /api/v1/targets — 创建目标
@@ -107,6 +118,56 @@ targetRoutes.post('/', async (c) => {
   })
 
   return c.json(success(target), 201)
+})
+
+// PUT /api/v1/targets/:id/assignments — 将目标分配给节点
+targetRoutes.put('/:id/assignments', async (c) => {
+  const id = c.req.param('id')
+  const target = await c.env.DB.prepare('SELECT id FROM targets WHERE id = ?').bind(id).first()
+  if (!target) return c.json(notFound('Target not found'), 404)
+  const previousAssignments = await c.env.DB.prepare(
+    'SELECT node_id FROM node_targets WHERE target_id = ?',
+  ).bind(id).all()
+  const previousNodeIds = (previousAssignments.results || []).map(row => String((row as { node_id: string }).node_id))
+
+  const body = await c.req.json<Record<string, unknown>>().catch(() => null)
+  const nodeIds = body?.node_ids
+  if (!Array.isArray(nodeIds) || nodeIds.length > 100 || nodeIds.some(nodeId => typeof nodeId !== 'string')) {
+    return c.json(badRequest('Invalid node_ids'), 400)
+  }
+  const uniqueNodeIds = [...new Set(nodeIds as string[])]
+  if (uniqueNodeIds.length > 0) {
+    const placeholders = uniqueNodeIds.map(() => '?').join(',')
+    const existingNodes = await c.env.DB.prepare(
+      `SELECT id FROM nodes WHERE id IN (${placeholders})`,
+    ).bind(...uniqueNodeIds).all()
+    const existingIds = new Set((existingNodes.results || []).map(row => String((row as { id: string }).id)))
+    if (uniqueNodeIds.some(nodeId => !existingIds.has(nodeId))) {
+      return c.json(badRequest('One or more nodes do not exist'), 400)
+    }
+  }
+
+  const statements = [c.env.DB.prepare('DELETE FROM node_targets WHERE target_id = ?').bind(id)]
+  statements.push(...uniqueNodeIds.map(nodeId =>
+    c.env.DB.prepare('INSERT INTO node_targets (node_id, target_id) VALUES (?, ?)').bind(nodeId, id),
+  ))
+  await c.env.DB.batch(statements)
+
+  await writeAuditLog(c.env, {
+    user_id: c.get('userId' as never) as string | undefined,
+    action: 'update',
+    object_type: 'target',
+    object_id: id,
+    changes: { node_ids: uniqueNodeIds },
+    ip_address: c.req.header('CF-Connecting-IP'),
+  })
+
+  const affectedNodeIds = [...new Set([...previousNodeIds, ...uniqueNodeIds])]
+  await Promise.all(affectedNodeIds.map(nodeId => notifyRealtime(c.env, {
+    type: 'config_changed', node_id: nodeId, reason: 'target_assigned',
+  })))
+
+  return c.json(success({ target_id: id, node_ids: uniqueNodeIds }))
 })
 
 // PUT /api/v1/targets/:id — 更新目标

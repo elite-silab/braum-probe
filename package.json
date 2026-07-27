@@ -1,6 +1,6 @@
 {
   "name": "braum-probe",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Braum 布隆 CF 探针 — 轻量级 Cloudflare Workers 网络探针",
   "license": "MIT",

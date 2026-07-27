@@ -23,6 +23,7 @@ import { rateLimit } from './middleware/rate-limit'
 import { handleScheduled } from './probe/scheduler'
 
 const app = new Hono<{ Bindings: Env }>()
+const applySecureHeaders = secureHeaders()
 
 const publicReadOnly = createMiddleware<{ Bindings: Env }>(async (c, next) => {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
@@ -36,7 +37,14 @@ const publicReadOnly = createMiddleware<{ Bindings: Env }>(async (c, next) => {
 // 全局中间件
 // ============================================
 app.use('*', logger())
-app.use('*', secureHeaders())
+app.use('*', async (c, next) => {
+  // Durable Object 返回的 WebSocket 101 响应头不可变，握手完成后不能再追加 HTTP 安全头。
+  if (c.req.header('Upgrade')?.toLowerCase() === 'websocket') {
+    await next()
+    return
+  }
+  await applySecureHeaders(c, next)
+})
 
 // ============================================
 // 健康检查（无需鉴权）

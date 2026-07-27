@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import worker from '../index'
 
 const env = {
@@ -20,5 +20,38 @@ describe('public API method boundary', () => {
     }), env as any, {} as any)
 
     expect(res.status).toBe(405)
+  })
+
+  it('普通 HTTP 响应仍包含安全头', async () => {
+    const res = await worker.fetch(
+      new Request('http://localhost/health'),
+      env as any,
+      {} as any,
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('X-Frame-Options')).toBe('SAMEORIGIN')
+  })
+
+  it('WebSocket 升级响应不再尝试追加 HTTP 安全头', async () => {
+    const realtimeFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    const wsEnv = {
+      ...env,
+      REALTIME: {
+        idFromName: vi.fn().mockReturnValue('global-id'),
+        get: vi.fn().mockReturnValue({ fetch: realtimeFetch }),
+      },
+    }
+
+    const res = await worker.fetch(new Request('http://localhost/api/v1/realtime', {
+      headers: {
+        Upgrade: 'websocket',
+        'CF-Connecting-IP': '203.0.113.10',
+      },
+    }), wsEnv as any, {} as any)
+
+    expect(res.status).toBe(204)
+    expect(res.headers.get('X-Frame-Options')).toBeNull()
+    expect(realtimeFetch).toHaveBeenCalledOnce()
   })
 })

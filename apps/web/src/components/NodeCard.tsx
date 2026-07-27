@@ -152,7 +152,7 @@ export default function NodeCard(props: NodeCardProps) {
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] dark:bg-slate-800/60">
           <span className="min-w-0 truncate font-medium text-slate-700 dark:text-slate-200">
-            {systemName ? osFamily(systemName) : '等待 Agent 识别'}
+            {systemName ? osFamily(systemName) : '等待探针识别'}
           </span>
           <span className="shrink-0 font-mono text-slate-400">{props.agentArch || '--'}</span>
         </div>
@@ -181,7 +181,7 @@ export default function NodeCard(props: NodeCardProps) {
           </>
         ) : (
           <div className="mt-3 rounded-lg border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            {pending ? '等待安装 Agent' : '暂无资源数据'}
+            {pending ? '等待安装探针' : '暂未收到资源数据'}
           </div>
         )}
 
@@ -217,7 +217,7 @@ export default function NodeCard(props: NodeCardProps) {
         <div className="flex items-start justify-between gap-4">
           <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">OS</span>
           <div className="min-w-0 text-right">
-            <p className="break-words text-sm font-semibold leading-5 text-slate-800 dark:text-slate-100">{systemName || '等待 Agent 识别'}</p>
+            <p className="break-words text-sm font-semibold leading-5 text-slate-800 dark:text-slate-100">{systemName || '等待探针识别'}</p>
             <p className="mt-0.5 font-mono text-[11px] text-slate-400">{systemName ? `${osFamily(systemName)} / ${props.agentArch || '?'}` : '-- / --'}</p>
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function NodeCard(props: NodeCardProps) {
         </div>
       ) : (
         <div className="mt-5 flex h-[91px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-          {pending ? '安装 Agent 后开始采集 VPS 资源指标' : '暂无最新资源数据，请检查 Agent 服务'}
+          {pending ? '安装探针后开始采集服务器资源' : '暂未收到最新数据，请检查探针服务'}
         </div>
       )}
 
@@ -270,7 +270,7 @@ export default function NodeCard(props: NodeCardProps) {
       <div className="mt-3"><Sparkline data={props.sparkline} id={props.id} /></div>
       <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
         <span>{metrics ? ageLabel(metrics.collected_at) : '尚未采集'}</span>
-        <span>{props.agentVersion ? `Agent ${props.agentVersion}` : '查看详情 →'}</span>
+        <span>{props.agentVersion ? `探针 ${props.agentVersion}` : '查看详情 →'}</span>
       </div>
     </a>
   )

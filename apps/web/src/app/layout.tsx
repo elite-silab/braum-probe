@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: 'Braum 布隆探针',
     template: '%s — Braum 探针',
   },
-  description: 'Braum 布隆 CF 探针 — 轻量级 VPS 资源与网络监测平台',
+  description: 'Braum 布隆探针 — 轻量服务器资源与网络状态监控',
   icons: { icon: '/favicon.svg' },
 }
 

@@ -60,7 +60,7 @@ export default function HistoryViewer() {
         }
         setError('')
       } else {
-        setError(res.error || '历史数据加载失败')
+        setError(res.error || '网络记录加载失败')
       }
     } catch {
       setError('暂时无法连接监控 API')
@@ -85,15 +85,18 @@ export default function HistoryViewer() {
 
   return (
     <>
-      {/* 筛选栏 */}
-      <div className="card mb-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400">时间范围</label>
+      <div className="mb-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-700/80 dark:bg-slate-900 sm:p-5">
+        <div className="mb-4">
+          <h2 className="font-semibold text-slate-900 dark:text-white">筛选记录</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">选择时间和服务器，缩小查看范围。</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,220px)_auto] sm:items-end">
+          <div className="min-w-0">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">时间范围</label>
             <select
               value={timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
-              className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-brand-900/40"
             >
               <option value="24h">最近 24 小时</option>
               <option value="7d">最近 7 天</option>
@@ -101,14 +104,14 @@ export default function HistoryViewer() {
               <option value="90d">最近 90 天</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 dark:text-slate-400">节点</label>
+          <div className="min-w-0">
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">服务器</label>
             <select
               value={nodeFilter}
               onChange={(e) => handleNodeFilterChange(e.target.value)}
-              className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-brand-900/40"
             >
-              <option value="">全部节点</option>
+              <option value="">全部服务器</option>
               {nodes.map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.name}
@@ -116,10 +119,10 @@ export default function HistoryViewer() {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
+          <div>
             <button
               onClick={loadResults}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-600 dark:text-slate-200 dark:hover:border-brand-700 dark:hover:bg-brand-950/30 sm:w-auto"
             >
               刷新
             </button>
@@ -135,18 +138,18 @@ export default function HistoryViewer() {
 
       {/* 结果表格 */}
       {loading ? (
-        <div className="card">
-          <div className="flex h-32 items-center justify-center">
+        <div className="card" aria-busy="true" aria-label="正在加载网络记录">
+          <div className="flex h-40 items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
           </div>
         </div>
       ) : results.length > 0 ? (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-900">
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
                 <tr>
-                  <th className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">节点</th>
+                  <th className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">服务器</th>
                   <th className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">目标</th>
                   <th className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">状态</th>
                   <th className="px-4 py-3 font-medium text-slate-500 dark:text-slate-400">延迟</th>
@@ -183,13 +186,42 @@ export default function HistoryViewer() {
                         {r.status_code || '--'}
                       </td>
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                        {r.probe_at ? new Date(r.probe_at).toLocaleString('zh-CN') : '--'}
+                        {formatProbeDate(r.probe_at)}
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 sm:hidden">
+            {results.map((result) => {
+              const node = nodes.find((item) => item.id === result.node_id)
+              return (
+                <article key={result.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                        {result.target_name || result.target_id?.slice(0, 8) || '未知目标'}
+                      </h3>
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                        {result.node_name || node?.name || result.node_id?.slice(0, 8) || '未知服务器'}
+                      </p>
+                    </div>
+                    <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${result.success ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                      {result.success ? '正常' : '失败'}
+                    </span>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800/60">
+                    <div><dt className="text-[10px] text-slate-400">延迟</dt><dd className="mt-1 font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{result.latency_ms != null ? `${Number(result.latency_ms).toFixed(1)}ms` : '--'}</dd></div>
+                    <div><dt className="text-[10px] text-slate-400">HTTP</dt><dd className="mt-1 font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{result.status_code || '--'}</dd></div>
+                    <div><dt className="text-[10px] text-slate-400">时间</dt><dd className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">{formatProbeTime(result.probe_at)}</dd></div>
+                  </dl>
+                  <p className="mt-2 text-right text-[11px] text-slate-400">{formatProbeDate(result.probe_at)}</p>
+                </article>
+              )
+            })}
           </div>
 
           {/* 分页 */}
@@ -218,12 +250,22 @@ export default function HistoryViewer() {
           )}
         </div>
       ) : (
-        <div className="card">
-          <div className="flex h-64 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-700/50">
-            <p className="text-slate-400 dark:text-slate-500">暂无历史数据</p>
-          </div>
+        <div className="card py-14 text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19V9" /><path d="M10 19V5" /><path d="M16 19v-7" /><path d="M22 19H2" /></svg>
+          </span>
+          <p className="mt-4 font-medium text-slate-700 dark:text-slate-200">这个范围内还没有网络记录</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">可以扩大时间范围，或切换到其他服务器查看。</p>
         </div>
       )}
     </>
   )
+}
+
+function formatProbeDate(value: string) {
+  return value ? new Date(value).toLocaleString('zh-CN') : '--'
+}
+
+function formatProbeTime(value: string) {
+  return value ? new Date(value).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '--'
 }

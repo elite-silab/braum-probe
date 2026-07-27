@@ -293,6 +293,14 @@
     @apply rounded-full px-2 py-1 text-xs font-medium;
   }
 
+  .public-status-hero {
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(135deg, color-mix(in srgb, var(--surface-card) 96%, var(--theme-primary)), var(--surface-card));
+    background-size: 28px 28px, 28px 28px, 100% 100%;
+  }
+
   /* 星海主题特殊星空背景 */
   [data-theme="hoshizora"] body {
     background-image:

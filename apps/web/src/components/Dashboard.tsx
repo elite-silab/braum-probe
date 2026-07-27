@@ -187,7 +187,7 @@ export default function Dashboard() {
       const nodesData: any = await nodesRes.json()
       const incData: any = await incRes.json()
 
-      if (!nodesRes.ok || nodesData?.code !== 0) throw new Error(nodesData?.message || '节点数据加载失败')
+      if (!nodesRes.ok || nodesData?.code !== 0) throw new Error(nodesData?.message || '服务器状态加载失败')
       if (!incRes.ok || incData?.code !== 0) throw new Error(incData?.message || '公告数据加载失败')
 
       const list: NodeData[] = nodesData?.data || []
@@ -314,17 +314,35 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* 标题 */}
-      <div className="mb-8">
-        <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300">
-          <span className={`h-1.5 w-1.5 rounded-full ${realtimeState === 'connected' ? 'bg-emerald-500' : 'bg-brand-500'}`} />
-          Workers 控制面 · {realtimeState === 'connected' ? '实时推送已连接' : '30 秒轮询保护'}
+      {/* 状态首屏 */}
+      <section className="public-status-hero relative mb-8 overflow-hidden rounded-3xl border border-slate-200/80 bg-white px-6 py-7 shadow-sm dark:border-slate-700/80 dark:bg-slate-900 sm:px-8 sm:py-9">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-brand-400/10 blur-3xl" aria-hidden="true" />
+        <div className="relative flex flex-col justify-between gap-7 sm:flex-row sm:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200/80 bg-brand-50/90 px-3 py-1 text-xs font-semibold text-brand-700 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-300">
+              <span className={`h-1.5 w-1.5 rounded-full ${realtimeState === 'connected' ? 'bg-emerald-500' : 'bg-brand-500'}`} />
+              实时状态
+            </div>
+            <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+              服务器状态，一眼看清
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400 sm:text-base">
+              持续汇总服务器运行、资源使用与网络质量。异常节点会优先标记，无需逐台检查。
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/50 dark:text-brand-300">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66" /><path d="M20 4v6h-6" /></svg>
+            </span>
+            <div>
+              <p className="text-xs text-slate-400">数据更新</p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {realtimeState === 'connected' ? '实时同步中' : '自动刷新中'}
+              </p>
+            </div>
+          </div>
         </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">基础设施状态总览</h1>
-        <p className="mt-2 max-w-2xl text-slate-500 dark:text-slate-400">
-          来自每台 VPS 常驻 Agent 的真实资源指标与节点本地网络探测结果。
-        </p>
-      </div>
+      </section>
 
       {error && (
         <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
@@ -345,9 +363,15 @@ export default function Dashboard() {
             </span>
             <div>
               <p className="font-semibold text-slate-900 dark:text-white">
-                {globalStats.total_nodes === 0 ? '还没有添加 VPS 节点' : globalStats.online_nodes === globalStats.total_nodes ? '所有已注册节点运行正常' : '部分节点需要关注'}
+                {globalStats.total_nodes === 0 ? '还没有可展示的服务器' : globalStats.online_nodes === globalStats.total_nodes ? '全部服务器运行正常' : '部分服务器需要关注'}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">状态以 Agent 最后心跳为准，默认每 60 秒更新。</p>
+              <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                {globalStats.total_nodes === 0
+                  ? '管理员添加节点并安装探针后，运行状态会显示在这里。'
+                  : globalStats.online_nodes === globalStats.total_nodes
+                    ? '最近一次状态已同步，页面会自动保持更新。'
+                    : '发现离线、暂停或尚未完成安装的服务器，请查看下方节点。'}
+              </p>
             </div>
           </div>
         </div>
@@ -377,7 +401,7 @@ export default function Dashboard() {
               </span>
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              直接查看每台 VPS 的系统、资源、流量、实时网速与运行时间。
+              每台服务器的资源、流量与网络状态都在卡片中，无需逐台进入详情。
             </p>
           </div>
 
@@ -480,21 +504,31 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <div className="card text-center py-12">
-            <p className="text-4xl mb-4">📡</p>
-            <p className="text-slate-500 dark:text-slate-400">
+          <div className="card py-12 text-center">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2" /><rect x="3" y="14" width="18" height="6" rx="2" /><path d="M7 7h.01M7 17h.01" /></svg>
+            </span>
+            <p className="mt-4 font-medium text-slate-700 dark:text-slate-200">
               {nodes.length === 0
-                ? '暂无 VPS 节点，请先在管理后台添加节点并安装 Agent'
-                : '没有匹配的节点，试试调整筛选条件'}
+                ? '还没有可展示的服务器'
+                : '没有符合当前条件的节点'}
+            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {nodes.length === 0
+                ? '管理员添加节点并安装探针后，运行数据会显示在这里。'
+                : '可以调整状态、地区或排序方式后再查看。'}
             </p>
           </div>
         )}
       </section>
 
-      {/* 最近公告 */}
+      {/* 运行公告 */}
       <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">最近公告</h2>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">运行公告</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">维护、故障与恢复进展会在这里持续更新。</p>
+          </div>
           <a href="/incidents" className="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400">
             查看全部 →
           </a>
@@ -505,7 +539,7 @@ export default function Dashboard() {
             {incidents.slice(0, 5).map(inc => {
               const st = incidentStatusMap[inc.status] || incidentStatusMap.monitoring
               return (
-                <a key={inc.id} href={`/incidents#${inc.id}`} className="card flex items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+                <a key={inc.id} href={`/incidents/${inc.id}`} className="card flex items-center justify-between gap-4 transition-shadow hover:shadow-sm">
                   <div className="min-w-0">
                     <h3 className="font-medium text-slate-900 dark:text-white truncate">{inc.title}</h3>
                     <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
@@ -520,8 +554,14 @@ export default function Dashboard() {
             })}
           </div>
         ) : (
-          <div className="card text-center py-6">
-            <p className="text-slate-500 dark:text-slate-400">暂无公告</p>
+          <div className="card flex items-center gap-3 py-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+            </span>
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-100">当前没有维护或故障公告</p>
+              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">所有服务保持正常运行。</p>
+            </div>
           </div>
         )}
       </section>

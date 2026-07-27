@@ -41,9 +41,13 @@
 
 ## 截图
 
-| 状态首页 | 管理后台 |
-|:---:|:---:|
-| ![Braum 状态总览](docs/screenshots/dashboard.png) | ![Braum 管理后台](docs/screenshots/admin-dashboard.png) |
+### 状态首页
+
+![Braum 状态首页](docs/screenshots/dashboard.png)
+
+### 管理后台
+
+![Braum 管理后台](docs/screenshots/admin-dashboard.png)
 
 ## 架构
 

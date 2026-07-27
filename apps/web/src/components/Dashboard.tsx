@@ -64,6 +64,9 @@ interface Incident {
 type SortKey = 'name' | 'latency' | 'uptime'
 type StatusFilter = 'all' | 'online' | 'offline' | 'paused' | 'pending'
 type RegionFilter = 'all' | 'asia' | 'europe' | 'north_america' | 'other'
+type NodeViewMode = 'detailed' | 'compact'
+
+const NODE_VIEW_STORAGE_KEY = 'braum-node-view-mode'
 
 const regionOptions = [
   { value: 'all', label: '全部地区' },
@@ -159,9 +162,20 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [regionFilter, setRegionFilter] = useState<RegionFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [nodeViewMode, setNodeViewMode] = useState<NodeViewMode>('detailed')
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const realtimeRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(NODE_VIEW_STORAGE_KEY)
+    if (saved === 'detailed' || saved === 'compact') setNodeViewMode(saved)
+  }, [])
+
+  const changeNodeViewMode = (mode: NodeViewMode) => {
+    setNodeViewMode(mode)
+    localStorage.setItem(NODE_VIEW_STORAGE_KEY, mode)
+  }
 
   // ── 数据获取 ──
   const fetchData = useCallback(async () => {
@@ -373,6 +387,28 @@ export default function Dashboard() {
               {ago && `更新于 ${ago}`}
             </span>
 
+            {/* 卡片密度 */}
+            <div className="col-span-4 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="节点卡片显示方式">
+              <button
+                type="button"
+                aria-pressed={nodeViewMode === 'detailed'}
+                onClick={() => changeNodeViewMode('detailed')}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${nodeViewMode === 'detailed' ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-700 dark:text-brand-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                title="显示完整资源信息"
+              >
+                ▦ 详细
+              </button>
+              <button
+                type="button"
+                aria-pressed={nodeViewMode === 'compact'}
+                onClick={() => changeNodeViewMode('compact')}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${nodeViewMode === 'compact' ? 'bg-white text-brand-700 shadow-sm dark:bg-slate-700 dark:text-brand-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                title="在一屏内浏览更多节点"
+              >
+                ▤ 紧凑
+              </button>
+            </div>
+
             {/* 手动刷新 */}
             <button
               onClick={() => { setRefreshing(true); fetchData() }}
@@ -420,7 +456,7 @@ export default function Dashboard() {
 
         {/* 节点卡片网格 */}
         {sorted.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={`grid ${nodeViewMode === 'compact' ? 'gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'gap-4 sm:grid-cols-2 lg:grid-cols-3'}`}>
             {sorted.map(n => (
               <NodeCard
                 key={n.id}
@@ -439,6 +475,7 @@ export default function Dashboard() {
                 sparkline={n.sparkline}
                 metrics={n.latest_metrics}
                 realtimeConnected={connectedNodeIds.has(n.id)}
+                variant={nodeViewMode}
               />
             ))}
           </div>

@@ -301,6 +301,19 @@
     background-size: 28px 28px, 28px 28px, 100% 100%;
   }
 
+  .public-mobile-drawer {
+    animation: public-drawer-in 180ms ease-out both;
+  }
+
+  @keyframes public-drawer-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .public-mobile-drawer { animation: none; }
+  }
+
   /* 星海主题特殊星空背景 */
   [data-theme="hoshizora"] body {
     background-image:

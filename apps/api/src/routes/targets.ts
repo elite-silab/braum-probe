@@ -5,6 +5,7 @@ import type { Env } from '../env'
 import { success, paginated, notFound, badRequest } from '../utils/response'
 import { writeAuditLog } from '../utils/audit'
 import { parsePublicHttpUrl } from '../utils/outbound'
+import { notifyRealtime } from '../realtime/client'
 
 export const targetRoutes = new Hono<{ Bindings: Env }>()
 
@@ -42,6 +43,17 @@ function validateTarget(input: Record<string, unknown>): string | null {
   if (port !== null && (!Number.isInteger(port) || port < 1 || port > 65535)) return 'Invalid port'
   if (input.status !== undefined && !['active', 'paused'].includes(String(input.status))) return 'Invalid status'
   return null
+}
+
+async function notifyAssignedAgents(env: Env, targetId: string, reason: string): Promise<void> {
+  const assignments = await env.DB.prepare(
+    'SELECT node_id FROM node_targets WHERE target_id = ?',
+  ).bind(targetId).all()
+  await Promise.all((assignments.results || []).map(row => notifyRealtime(env, {
+    type: 'config_changed',
+    node_id: String((row as { node_id: string }).node_id),
+    reason,
+  })))
 }
 
 // GET /api/v1/targets — 目标列表
@@ -133,6 +145,8 @@ targetRoutes.put('/:id', async (c) => {
     ip_address: c.req.header('CF-Connecting-IP'),
   })
 
+  await notifyAssignedAgents(c.env, id, 'target_updated')
+
   return c.json(success(target))
 })
 
@@ -141,6 +155,9 @@ targetRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id')
   const existing = await c.env.DB.prepare('SELECT id FROM targets WHERE id = ?').bind(id).first()
   if (!existing) return c.json(notFound('Target not found'), 404)
+  const assignments = await c.env.DB.prepare(
+    'SELECT node_id FROM node_targets WHERE target_id = ?',
+  ).bind(id).all()
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM probe_results WHERE target_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM probe_stats WHERE target_id = ?').bind(id),
@@ -154,6 +171,12 @@ targetRoutes.delete('/:id', async (c) => {
     object_id: id,
     ip_address: c.req.header('CF-Connecting-IP'),
   })
+
+  await Promise.all((assignments.results || []).map(row => notifyRealtime(c.env, {
+    type: 'config_changed',
+    node_id: String((row as { node_id: string }).node_id),
+    reason: 'target_deleted',
+  })))
 
   return c.json(success(null))
 })

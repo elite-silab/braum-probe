@@ -21,7 +21,7 @@
 
 - **只部署一个 Worker**：网站、管理后台、API、Agent 接口和 Cron 共用一个地址与一份配置。
 - **无需控制面 VPS**：Next.js、Hono、D1 和 KV 全部运行在 Cloudflare。
-- **Agent 主动外连**：VPS 只通过出站 HTTPS 上报，不需要开放 Agent 端口。
+- **Agent 主动外连**：VPS 只通过出站 HTTPS/WSS 通信，不需要开放 Agent 端口。
 - **节点本地探测**：HTTP/DNS 任务在 VPS 上执行，真实反映不同地区的网络质量。
 - **添加节点简单**：后台只填节点名称，即可生成 15 分钟有效的一次性安装命令。
 - **轻量易维护**：单文件 Go Agent、自动数据库迁移、自动聚合与数据清理。
@@ -29,6 +29,7 @@
 ## 功能
 
 - 首页直接展示 VPS 完整系统、CPU、内存、磁盘、实时网速、累计流量和运行时间
+- WebSocket 实时状态与配置通知，断线自动退回可靠的 HTTPS 心跳和 30 秒页面轮询
 - `braum-agentctl` 数字菜单管理 Agent：状态、日志、启停、在线更新与卸载
 - HTTP/DNS 节点本地探测、延迟趋势与可用率
 - 一次性 Agent 注册令牌与节点独立密钥
@@ -49,9 +50,10 @@
 ```text
 浏览器 ───────────────┐
                      ▼
-VPS Agent ──HTTPS──▶ braum-probe Worker
+VPS Agent ─HTTPS/WSS▶ braum-probe Worker
                      ├─ Next.js 状态页 / 管理后台
                      ├─ Hono API / Agent 接口
+                     ├─ Durable Object 实时连接中心
 Cloudflare Cron ────▶ ├─ 定时告警 / 聚合 / 清理
                      └─ D1 + KV
 ```
@@ -70,7 +72,7 @@ Cloudflare Cron ────▶ ├─ 定时告警 / 聚合 / 清理
 | 全栈 Worker | Cloudflare Workers + OpenNext | 单 Worker 运行完整应用 |
 | 前端 | Next.js App Router + React + Tailwind CSS | 状态页与管理后台 |
 | API | Hono | 鉴权、节点、探测、告警与 Agent 接口 |
-| 数据 | Cloudflare D1 + KV | 持久数据、缓存与限流状态 |
+| 数据与实时通道 | Cloudflare D1 + KV + Durable Objects | 持久数据、缓存、限流与 WebSocket 连接 |
 | Agent | Go | VPS 资源采集与本地网络探测 |
 
 ## 快速部署
@@ -106,6 +108,8 @@ Cloudflare 的 Workers 子域可在控制台中查看。Worker 名称保持 `bra
 ```text
 https://braum-probe.你的Workers子域.workers.dev
 ```
+
+`REALTIME` Durable Object 已写在配置中，部署时由 Cloudflare 自动创建。不要手工创建 Durable Object，也不需要填写 ID、WebSocket 地址、端口或证书。
 
 ### 4. 创建唯一 Worker
 
@@ -179,7 +183,7 @@ docs/                # 架构、部署和交互文档
 
 ## 安全
 
-- Agent 密钥只返回一次，D1 仅保存 SHA-256 摘要。
+- Agent 密钥只返回一次，D1 仅保存 SHA-256 摘要；WebSocket 握手同样先校验节点凭据。
 - 通知渠道配置使用 AES-GCM 加密。
 - 管理操作使用三级 RBAC 并写入脱敏审计日志。
 - HTTP 探测目标保存前执行私网和回环地址检查。

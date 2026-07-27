@@ -27,6 +27,20 @@
       "id": "f0557966b8904cbba7c1fa32817df690"
     }
   ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REALTIME",
+        "class_name": "RealtimeHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RealtimeHub"]
+    }
+  ],
   "triggers": {
     "crons": [
       "*/2 * * * *",

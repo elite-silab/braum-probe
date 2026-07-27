@@ -5,6 +5,7 @@ import { calculateNetworkRateSeries } from '@braum/shared'
 import type { Env } from '../env'
 import { success, paginated, notFound, badRequest } from '../utils/response'
 import { writeAuditLog } from '../utils/audit'
+import { notifyRealtime } from '../realtime/client'
 
 export const nodeRoutes = new Hono<{ Bindings: Env }>()
 
@@ -445,6 +446,8 @@ nodeRoutes.put('/:id', async (c) => {
     ip_address: c.req.header('CF-Connecting-IP'),
   })
 
+  await notifyRealtime(c.env, { type: 'config_changed', node_id: id, reason: 'node_updated' })
+
   return c.json(success(node))
 })
 
@@ -469,6 +472,8 @@ nodeRoutes.delete('/:id', async (c) => {
     object_id: id,
     ip_address: c.req.header('CF-Connecting-IP'),
   })
+
+  await notifyRealtime(c.env, { type: 'node_deleted', node_id: id })
 
   return c.json(success(null))
 })

@@ -2,7 +2,7 @@
 
 > 版本：v1.0 · 更新：2026-07-27 · 适用：Linux amd64 / arm64
 
-Braum Agent 安装在被监控的 VPS 上，负责采集服务器资源，并从 VPS 本地执行 HTTP/DNS 探测。Agent 只主动访问 Braum Worker，不监听公网端口，也不提供远程终端。
+Braum Agent 安装在被监控的 VPS 上，负责采集服务器资源，并从 VPS 本地执行 HTTP/DNS 探测。Agent 只通过 HTTPS/WSS 主动访问 Braum Worker，不监听公网端口，也不提供远程终端。
 
 ## 1. 使用前准备
 
@@ -11,7 +11,7 @@ Braum Agent 安装在被监控的 VPS 上，负责采集服务器资源，并从
 - Braum Worker 已部署并能打开管理后台；
 - VPS 使用 Linux 和 systemd；
 - VPS 架构为 amd64（x86_64）或 arm64（aarch64）；
-- VPS 可以通过 HTTPS 访问 Worker 和 GitHub Release；
+- VPS 可以通过出站 TCP 443 访问 Worker 和 GitHub Release；
 - 当前账号可以使用 `sudo`，或已经是 root。
 
 安装脚本会自动识别架构、下载对应二进制、校验 SHA-256，创建低权限的 `braum-agent` 系统用户，并安装数字菜单管理工具 `braum-agentctl`。
@@ -90,7 +90,7 @@ sudo journalctl -u braum-agent -n 50 --no-pager
 sudo journalctl -u braum-agent -f
 ```
 
-正常运行时服务状态为 `active (running)`。Agent 默认至少每 60 秒上报一次，失败后会自动退避重试，网络恢复后无需手动重启。
+正常运行时服务状态为 `active (running)`。Agent 默认至少每 60 秒通过 HTTPS 上报一次，并同时保持自动推导出的 WSS 实时控制连接。WebSocket 用于配置变化通知，不承载完整监控数据；断线时会自动退避重连，HTTPS 上报不受影响。
 
 ## 5. Agent 会上报什么
 
@@ -115,6 +115,8 @@ Agent 不会上报文件内容、Shell 历史、环境变量、密码或 SSH 密
 2. 添加 HTTP URL 或 DNS 域名。
 3. 编辑 VPS 节点，将目标关联到该节点。
 4. 等待下一次心跳和探测周期。
+
+新版 Agent 建立实时通道后，关联目标、暂停状态或采集周期变化会立即唤醒一次 HTTPS 心跳，通常不再需要等待完整周期。旧版 Agent 仍会在下一次定时心跳获取配置。
 
 暂停节点后，Agent 仍会上报资源与心跳，但 Worker 不再向它下发探测目标。
 
@@ -218,6 +220,10 @@ sudo journalctl -u braum-agent -n 100 --no-pager
 
 确认 VPS 的出站 TCP 443、DNS 和系统时间正常。Agent 会自动重试；持续失败时从日志中查找 `heartbeat failed` 后面的 HTTP 状态或网络错误。
 
+### 日志显示 `realtime channel disconnected`
+
+这表示 WebSocket 实时通知暂时不可用，不代表监控停止。Agent 会继续通过 HTTPS 上报并自动重连。持续出现时确认 VPS 出站 TCP 443 未拦截长连接；如果使用自定义域、Cloudflare Access 或 WAF，确保 `/api/agent/v1/ws` 允许 WebSocket Upgrade。无需开放 VPS 入站端口。
+
 ### 提示 `braum-agentctl: command not found`
 
 这是升级前安装的旧节点。按照「给已经安装 Agent 的旧节点补装菜单」执行一次补装命令，不需要重新添加节点或重新注册。
@@ -232,14 +238,14 @@ sudo journalctl -u braum-agent -n 100 --no-pager
 
 ## 11. 安全注意事项
 
-- 所有生产通信必须使用 HTTPS；只有本地开发允许 localhost HTTP。
+- 所有生产通信必须使用 HTTPS/WSS；只有本地开发允许 localhost HTTP/WS。
 - 不公开安装命令、注册令牌或 `/etc/braum-agent/config.json`。
 - 安装命令泄漏但尚未使用时，立即在后台生成新命令，旧令牌会失效。
 - 长期密钥可能泄漏时，立即在后台吊销凭据并重新安装。
 - D1 只保存注册令牌和长期密钥的 SHA-256 摘要，不能反推出明文。
 - Agent 使用无登录 Shell 的低权限用户运行，并启用 systemd 沙箱限制。
 - 在线更新强制校验 TLS 和 SHA-256，失败时不会继续替换；配置摘要永不显示节点密钥。
-- Agent 不开放入站端口；防火墙只需允许必要的出站 HTTPS 和 DNS。
+- Agent 不开放入站端口；防火墙只需允许必要的出站 HTTPS/WSS（TCP 443）和 DNS。
 
 ## 12. 开发与发布
 
@@ -263,5 +269,6 @@ Agent 使用以下同源接口：
 | `POST /api/agent/v1/enroll` | 一次性注册 | 注册令牌 |
 | `POST /api/agent/v1/heartbeat` | 上报系统与资源、获取目标 | 节点长期密钥 |
 | `POST /api/agent/v1/probe-results` | 上报 HTTP/DNS 结果 | 节点长期密钥 |
+| `GET /api/agent/v1/ws` | 实时配置通知与连接状态 | 节点长期密钥 |
 
-远程终端不属于当前 Agent 协议，也不会复用永久心跳密钥实现。
+状态页通过同源 `/api/v1/realtime` 接收轻量变化事件，再从公开 API 读取完整数据。远程终端不属于当前 Agent 协议，也不会因为启用 WebSocket 而自动开放。

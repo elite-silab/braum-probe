@@ -4,6 +4,7 @@ import type { Env } from '../env'
 import { createEnrollmentToken, hashAgentToken } from '../utils/agent-auth'
 import { writeAuditLog } from '../utils/audit'
 import { notFound, success } from '../utils/response'
+import { notifyRealtime } from '../realtime/client'
 
 export const agentAdminRoutes = new Hono<{ Bindings: Env }>()
 
@@ -90,6 +91,12 @@ agentAdminRoutes.delete('/nodes/:nodeId/credentials', async (c) => {
     object_type: 'agent_credential',
     object_id: nodeId,
     ip_address: c.req.header('CF-Connecting-IP'),
+  })
+
+  await notifyRealtime(c.env, {
+    type: 'disconnect_agent',
+    node_id: nodeId,
+    reason: 'credentials_revoked',
   })
 
   return c.json(success(null))

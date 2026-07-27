@@ -63,6 +63,9 @@ func main() {
 
 	backoff := 5 * time.Second
 	var probeRunning atomic.Bool
+	reportNow := make(chan struct{}, 1)
+	controlConfig := *config
+	go client.RunControlChannel(ctx, controlConfig, system.AgentVersion, reportNow)
 	for {
 		if ctx.Err() != nil {
 			return
@@ -96,10 +99,17 @@ func main() {
 			}()
 		}
 		jitter := time.Duration(rand.Intn(5000)) * time.Millisecond
+		timer := time.NewTimer(time.Duration(config.Interval)*time.Second + jitter)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case <-time.After(time.Duration(config.Interval)*time.Second + jitter):
+		case <-reportNow:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			log.Printf("realtime configuration change received; reporting now")
+		case <-timer.C:
 		}
 	}
 }

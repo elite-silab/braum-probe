@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import GlobalStats from './GlobalStats'
 import NodeCard from './NodeCard'
+import { createRealtimeConnection, type RealtimeConnectionState } from '../lib/realtime'
 
 const API_BASE = ''
 const REFRESH_INTERVAL = 30_000
@@ -151,6 +152,8 @@ export default function Dashboard() {
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [ago, setAgo] = useState('')
+  const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>('connecting')
+  const [connectedNodeIds, setConnectedNodeIds] = useState<Set<string>>(() => new Set())
 
   // 筛选 & 排序
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -158,6 +161,7 @@ export default function Dashboard() {
   const [sortKey, setSortKey] = useState<SortKey>('name')
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const realtimeRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── 数据获取 ──
   const fetchData = useCallback(async () => {
@@ -219,6 +223,40 @@ export default function Dashboard() {
     }
   }, [fetchData])
 
+  // WebSocket 只通知数据发生变化；完整数据继续从公开 API 获取。
+  useEffect(() => {
+    const scheduleRefresh = () => {
+      if (realtimeRefreshRef.current) clearTimeout(realtimeRefreshRef.current)
+      realtimeRefreshRef.current = setTimeout(fetchData, 250)
+    }
+    const disconnect = createRealtimeConnection({
+      onStateChange: setRealtimeState,
+      onEvent: event => {
+        if (event.type === 'snapshot') {
+          setConnectedNodeIds(new Set(event.connected_node_ids))
+          return
+        }
+        if (event.type === 'node_connected') {
+          setConnectedNodeIds(current => new Set(current).add(event.node_id))
+          scheduleRefresh()
+          return
+        }
+        if (event.type === 'node_disconnected' || event.type === 'node_deleted') {
+          setConnectedNodeIds(current => {
+            const next = new Set(current)
+            next.delete(event.node_id)
+            return next
+          })
+        }
+        scheduleRefresh()
+      },
+    })
+    return () => {
+      disconnect()
+      if (realtimeRefreshRef.current) clearTimeout(realtimeRefreshRef.current)
+    }
+  }, [fetchData])
+
   // 首次加载后开始 ago 计时
   useEffect(() => {
     if (lastUpdated) setAgo(timeAgo(lastUpdated))
@@ -265,8 +303,8 @@ export default function Dashboard() {
       {/* 标题 */}
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-          Workers 控制面 · VPS Agent 数据面
+          <span className={`h-1.5 w-1.5 rounded-full ${realtimeState === 'connected' ? 'bg-emerald-500' : 'bg-brand-500'}`} />
+          Workers 控制面 · {realtimeState === 'connected' ? '实时推送已连接' : '30 秒轮询保护'}
         </div>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl">基础设施状态总览</h1>
         <p className="mt-2 max-w-2xl text-slate-500 dark:text-slate-400">
@@ -395,6 +433,7 @@ export default function Dashboard() {
                 uptime={n.uptime}
                 sparkline={n.sparkline}
                 metrics={n.latest_metrics}
+                realtimeConnected={connectedNodeIds.has(n.id)}
               />
             ))}
           </div>

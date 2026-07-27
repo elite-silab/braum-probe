@@ -104,3 +104,30 @@ export interface NodeAgentSnapshot {
   public_ip: string | null
   latest_metrics: NodeMetrics | null
 }
+
+export const REALTIME_PROTOCOL_VERSION = 1
+export const REALTIME_MAX_MESSAGE_BYTES = 16 * 1024
+
+export type AgentControlMessage =
+  | { type: 'welcome'; protocol_version: number; server_time: string }
+  | { type: 'config_changed'; reason: string; sent_at: string }
+  | { type: 'disconnect'; reason: string; sent_at: string }
+  | { type: 'pong' }
+
+export type AgentRealtimeMessage =
+  | { type: 'ready'; protocol_version: number; agent_version: string }
+  | { type: 'ping' }
+
+export type RealtimeViewerEvent =
+  | { type: 'snapshot'; connected_node_ids: string[]; sent_at: string }
+  | { type: 'node_connected'; node_id: string; sent_at: string }
+  | { type: 'node_disconnected'; node_id: string; sent_at: string }
+  | { type: 'metrics_updated'; node_id: string; sent_at: string }
+  | { type: 'node_updated'; node_id: string; sent_at: string }
+  | { type: 'node_deleted'; node_id: string; sent_at: string }
+
+export type RealtimeInternalEvent =
+  | { type: 'metrics_updated'; node_id: string }
+  | { type: 'config_changed'; node_id: string; reason: string }
+  | { type: 'disconnect_agent'; node_id: string; reason: string }
+  | { type: 'node_deleted'; node_id: string }

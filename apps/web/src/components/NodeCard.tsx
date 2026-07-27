@@ -32,6 +32,7 @@ interface NodeCardProps {
   uptime: number | null
   sparkline: number[]
   metrics: Metrics | null
+  realtimeConnected: boolean
 }
 
 function countryFlag(country: string): string {
@@ -139,10 +140,17 @@ export default function NodeCard(props: NodeCardProps) {
           <h3 className="truncate text-base font-semibold text-slate-950 dark:text-white">{props.name}</h3>
           <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{countryFlag(props.country)} {props.city || props.country}</p>
         </div>
-        <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-          {status.label}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+            {status.label}
+          </span>
+          {!pending && (
+            <span className={`text-[10px] font-medium ${props.realtimeConnected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+              {props.realtimeConnected ? '● 实时通道' : '心跳模式'}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-800/50">

@@ -15,6 +15,7 @@ import {
 import { badRequest, success, unauthorized } from '../utils/response'
 import { createLinuxInstallScript, createLinuxManageScript } from '../utils/install-script'
 import { writeAuditLog } from '../utils/audit'
+import { connectAgentRealtime, notifyRealtime } from '../realtime/client'
 
 export const agentRoutes = new Hono<{ Bindings: Env }>()
 
@@ -113,6 +114,18 @@ agentRoutes.get('/manage.sh', (c) => {
   c.header('Cache-Control', 'public, max-age=300')
   c.header('X-Content-Type-Options', 'nosniff')
   return c.body(createLinuxManageScript(releaseUrl.toString()))
+})
+
+agentRoutes.get('/ws', async (c) => {
+  if (c.req.header('Upgrade')?.toLowerCase() !== 'websocket') {
+    return c.json(badRequest('WebSocket upgrade required'), 426)
+  }
+  const nodeId = c.req.query('node_id') || ''
+  if (!validText(nodeId, 100)) return c.json(badRequest('Invalid node id'), 400)
+
+  const auth = await authenticateAgent(c.env, nodeId, c.req.header('Authorization'))
+  if (!auth.ok) return c.json(auth.response, 401)
+  return connectAgentRealtime(c.env, nodeId)
 })
 
 function validText(value: unknown, max = 200): value is string {
@@ -317,6 +330,8 @@ agentRoutes.post('/heartbeat', async (c) => {
         LIMIT 100
       `).bind(body.node_id).all()
 
+  await notifyRealtime(c.env, { type: 'metrics_updated', node_id: body.node_id })
+
   return c.json(success({
     heartbeat_interval: Math.max(60, auth.node.probe_interval),
     server_time: new Date().toISOString(),
@@ -369,6 +384,8 @@ agentRoutes.post('/probe-results', async (c) => {
     JSON.stringify({ node_id: body.node_id, ...result }),
     { expirationTtl: 300 },
   )))
+
+  await notifyRealtime(c.env, { type: 'metrics_updated', node_id: body.node_id })
 
   return c.json(success({ accepted: body.results.length }))
 })

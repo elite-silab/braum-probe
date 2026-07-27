@@ -8,6 +8,9 @@ export interface Env {
   // KV 命名空间绑定
   CACHE: KVNamespace
 
+  // WebSocket 实时控制通道（测试和旧本地状态允许缺省，生产由 wrangler.jsonc 绑定）
+  REALTIME?: DurableObjectNamespace
+
   // Variables (wrangler.jsonc vars)
   APP_VERSION: string
   AGENT_API_URL: string

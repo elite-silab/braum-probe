@@ -6,6 +6,8 @@ import nextWorker from './apps/web/.open-next/worker.js'
 import apiWorker from './apps/api/src/index'
 import type { Env } from './apps/api/src/env'
 
+export { RealtimeHub } from './apps/api/src/realtime/hub'
+
 function isApiRequest(pathname: string): boolean {
   return pathname === '/health' || pathname.startsWith('/api/')
 }

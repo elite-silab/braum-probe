@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import Database from 'better-sqlite3'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
 import { agentRoutes, readAgentLocation } from './agent'
 import { agentAdminRoutes } from './agent-admin'
@@ -262,6 +262,35 @@ describe('VPS Agent registration and reporting', () => {
     expect(snapshot.last_heartbeat_at).toBeTruthy()
     expect(snapshot.hostname).toBe('vps-01')
     expect(snapshot.cpu_usage).toBe(12.5)
+  })
+
+  it('WebSocket 升级先校验 Agent 密钥再转发给实时中心', async () => {
+    const apps = setup()
+    const { secret } = await enroll(apps)
+    const realtimeFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    ;(apps.env as any).REALTIME = {
+      idFromName: vi.fn().mockReturnValue('global-id'),
+      get: vi.fn().mockReturnValue({ fetch: realtimeFetch }),
+    }
+
+    const unauthorized = await apps.agent(new Request(
+      'https://api.example.com/api/agent/v1/ws?node_id=node-1',
+      { headers: { Upgrade: 'websocket', Authorization: 'Bearer wrong' } },
+    ))
+    expect(unauthorized.status).toBe(401)
+    expect(realtimeFetch).not.toHaveBeenCalled()
+
+    const upgraded = await apps.agent(new Request(
+      'https://api.example.com/api/agent/v1/ws?node_id=node-1',
+      { headers: { Upgrade: 'websocket', Authorization: `Bearer ${secret}` } },
+    ))
+    expect(upgraded.status).toBe(204)
+    expect(realtimeFetch).toHaveBeenCalledOnce()
+    const forwarded = realtimeFetch.mock.calls[0][0] as Request
+    expect(new URL(forwarded.url).pathname).toBe('/connect/agent')
+    expect(new URL(forwarded.url).searchParams.get('node_id')).toBe('node-1')
+    expect(forwarded.headers.get('Authorization')).toBeNull()
+    expect(forwarded.headers.get('Upgrade')).toBe('websocket')
   })
 
   it('拒绝错误密钥和越权目标，只接受分配给本节点的结果', async () => {

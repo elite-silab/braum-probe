@@ -17,6 +17,7 @@ import { auditLogRoutes } from './routes/audit-logs'
 import { userRoutes } from './routes/users'
 import { agentRoutes } from './routes/agent'
 import { agentAdminRoutes } from './routes/agent-admin'
+import { realtimeRoutes } from './routes/realtime'
 import { authMiddleware, requireRoleForMethods, requireRoleForMutation } from './middleware/auth'
 import { rateLimit } from './middleware/rate-limit'
 import { handleScheduled } from './probe/scheduler'
@@ -59,6 +60,8 @@ app.route('/api/v1/probe-results', probeResultRoutes) // GET only
 app.use('/api/v1/incidents', publicReadOnly)
 app.use('/api/v1/incidents/*', publicReadOnly)
 app.route('/api/v1/incidents', incidentRoutes) // GET only for public
+app.use('/api/v1/realtime', rateLimit(30, 60))
+app.route('/api/v1/realtime', realtimeRoutes)
 
 // ============================================
 // Admin API — 管理操作接口（需鉴权）

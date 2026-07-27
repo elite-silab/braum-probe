@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Agent 版本号（例如 agent-v0.1.1）'
+        description: 'Agent 版本号（例如 agent-v0.1.2）'
         required: true
-        default: 'agent-v0.1.1'
+        default: 'agent-v0.1.2'
 
 permissions:
   contents: write

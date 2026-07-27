@@ -2,6 +2,36 @@ function shellLiteral(value: string): string {
   return `'${value.replaceAll("'", `'"'"'`)}'`
 }
 
+const linuxSystemdService = `[Unit]
+Description=Braum VPS Monitoring Agent
+Documentation=https://github.com/elite-silab/braum-probe
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=braum-agent
+Group=braum-agent
+ExecStart=/usr/local/bin/braum-agent --config /etc/braum-agent/config.json
+Restart=on-failure
+RestartSec=10s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/etc/braum-agent
+
+[Install]
+WantedBy=multi-user.target`
+
 export function createLinuxManageScript(releaseBaseUrl: string): string {
   return `#!/usr/bin/env bash
 set -uo pipefail
@@ -43,6 +73,28 @@ config_node_id() {
 
 config_interval() {
   sed -n 's/^[[:space:]]*"interval"[[:space:]]*:[[:space:]]*\\([0-9][0-9]*\\).*/\\1/p' "$CONFIG_FILE" | sed -n '1p'
+}
+
+read_agent_version() {
+  local binary="$1" output
+  if [[ ! -x "$binary" ]]; then
+    printf '未知版本'
+    return
+  fi
+  output="$("$binary" --version 2>/dev/null || true)"
+  output="\${output%%$'\\n'*}"
+  if [[ -n "$output" ]]; then
+    printf '%s' "$output"
+  else
+    printf '未知版本'
+  fi
+}
+
+write_service_unit() {
+  local output="$1"
+  cat >"$output" <<'UNIT'
+${linuxSystemdService}
+UNIT
 }
 
 install_manager() {
@@ -138,14 +190,14 @@ service_action() {
 }
 
 update_agent() {
-  local arch artifact work_dir old_version new_version new_binary backup
-  for command in curl sha256sum install systemctl uname mktemp cp mv rm bash; do
+  local arch artifact work_dir old_version new_version new_binary binary_backup new_service service_backup
+  for command in curl sha256sum install systemctl uname mktemp cp mv rm bash cat; do
     if ! command -v "$command" >/dev/null 2>&1; then
       echo "缺少必要命令：$command" >&2
       return 1
     fi
   done
-  if [[ ! -f "$CONFIG_FILE" || ! -f "$SERVICE_FILE" ]]; then
+  if [[ ! -x "$AGENT_BIN" || ! -f "$CONFIG_FILE" || ! -f "$SERVICE_FILE" ]]; then
     echo "Agent 安装不完整，请在后台重新生成安装命令。" >&2
     return 1
   fi
@@ -171,35 +223,66 @@ update_agent() {
     return 1
   fi
 
-  old_version="$($AGENT_BIN --version 2>/dev/null || echo '未知版本')"
-  new_version="$($work_dir/$artifact --version 2>/dev/null || echo '未知版本')"
+  old_version="$(read_agent_version "$AGENT_BIN")"
   new_binary="/usr/local/bin/.braum-agent.new.$$"
-  backup="/usr/local/bin/.braum-agent.backup.$$"
-  rm -f "$new_binary" "$backup"
+  binary_backup="/usr/local/bin/.braum-agent.backup.$$"
+  new_service="/etc/systemd/system/.braum-agent.service.new.$$"
+  service_backup="/etc/systemd/system/.braum-agent.service.backup.$$"
+  rm -f "$new_binary" "$binary_backup" "$new_service" "$service_backup"
   if ! install -m 0755 "$work_dir/$artifact" "$new_binary"; then
     echo "准备新版本失败，现有 Agent 未被修改。" >&2
     rm -rf "$work_dir"
     return 1
   fi
+  new_version="$(read_agent_version "$new_binary")"
+  if [[ "$new_version" != "braum-agent "* ]]; then
+    echo "无法识别下载文件的 Agent 版本，已取消更新。" >&2
+    rm -f "$new_binary"
+    rm -rf "$work_dir"
+    return 1
+  fi
+  write_service_unit "$work_dir/braum-agent.service"
+  if ! install -m 0644 "$work_dir/braum-agent.service" "$new_service"; then
+    echo "准备 systemd 安全配置失败，现有 Agent 未被修改。" >&2
+    rm -f "$new_binary" "$new_service"
+    rm -rf "$work_dir"
+    return 1
+  fi
   if [[ -e "$AGENT_BIN" ]]; then
-    if ! cp -p "$AGENT_BIN" "$backup"; then
+    if ! cp -p "$AGENT_BIN" "$binary_backup"; then
       echo "备份现有 Agent 失败，已取消更新。" >&2
-      rm -f "$new_binary"
+      rm -f "$new_binary" "$new_service"
       rm -rf "$work_dir"
       return 1
     fi
   fi
+  if ! cp -p "$SERVICE_FILE" "$service_backup"; then
+    echo "备份 systemd 服务失败，已取消更新。" >&2
+    rm -f "$new_binary" "$new_service" "$binary_backup"
+    rm -rf "$work_dir"
+    return 1
+  fi
   if ! mv -f "$new_binary" "$AGENT_BIN"; then
     echo "替换 Agent 程序失败。" >&2
-    rm -f "$new_binary" "$backup"
+    rm -f "$new_binary" "$new_service" "$binary_backup" "$service_backup"
+    rm -rf "$work_dir"
+    return 1
+  fi
+  if ! mv -f "$new_service" "$SERVICE_FILE"; then
+    echo "更新 systemd 安全配置失败，正在回滚……" >&2
+    mv -f "$binary_backup" "$AGENT_BIN"
+    rm -f "$new_binary" "$new_service" "$service_backup"
     rm -rf "$work_dir"
     return 1
   fi
 
-  if systemctl restart "$SERVICE_NAME" && systemctl is-active --quiet braum-agent; then
-    rm -f "$backup"
+  if systemctl daemon-reload \
+    && systemctl restart "$SERVICE_NAME" \
+    && systemctl is-active --quiet "$SERVICE_NAME"; then
+    rm -f "$binary_backup" "$service_backup"
     rm -rf "$work_dir"
     echo "Agent 更新成功：$old_version → $new_version"
+    echo "systemd 安全配置已同步更新。"
     echo "节点配置与密钥均已保留。"
     if ! install_manager; then
       echo "Agent 已更新，但管理脚本刷新失败；可稍后重试。" >&2
@@ -208,11 +291,11 @@ update_agent() {
   fi
 
   echo "新版本启动失败，正在回滚……" >&2
-  if [[ -f "$backup" ]]; then
-    mv -f "$backup" "$AGENT_BIN"
-    systemctl restart "$SERVICE_NAME" || true
-  fi
-  rm -f "$new_binary" "$backup"
+  [[ ! -f "$binary_backup" ]] || mv -f "$binary_backup" "$AGENT_BIN"
+  [[ ! -f "$service_backup" ]] || mv -f "$service_backup" "$SERVICE_FILE"
+  systemctl daemon-reload || true
+  systemctl restart "$SERVICE_NAME" || true
+  rm -f "$new_binary" "$binary_backup" "$new_service" "$service_backup"
   rm -rf "$work_dir"
   echo "更新失败，已恢复原 Agent。" >&2
   return 1
@@ -375,35 +458,7 @@ chmod 0600 /etc/braum-agent/config.json
 unset ENROLLMENT_TOKEN
 
 cat >/etc/systemd/system/braum-agent.service <<'UNIT'
-[Unit]
-Description=Braum VPS Monitoring Agent
-Documentation=https://github.com/elite-silab/braum-probe
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=braum-agent
-Group=braum-agent
-ExecStart=/usr/local/bin/braum-agent --config /etc/braum-agent/config.json
-Restart=on-failure
-RestartSec=10s
-UMask=0077
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-LockPersonality=true
-RestrictSUIDSGID=true
-RestrictNamespaces=true
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-ReadWritePaths=/etc/braum-agent
-
-[Install]
-WantedBy=multi-user.target
+${linuxSystemdService}
 UNIT
 
 systemctl daemon-reload

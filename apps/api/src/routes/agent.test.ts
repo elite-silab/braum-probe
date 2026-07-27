@@ -332,6 +332,7 @@ describe('VPS Agent registration and reporting', () => {
     ))
     expect(valid.status).toBe(200)
     expect(database!.prepare('SELECT COUNT(*) AS count FROM probe_results').get()).toEqual({ count: 1 })
+    expect(apps.env.CACHE.put).not.toHaveBeenCalled()
   })
 
   it('吊销凭据后旧 Agent 密钥立即失效', async () => {

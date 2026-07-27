@@ -76,7 +76,7 @@ Cloudflare Cron ────▶ ├─ 定时告警 / 聚合 / 清理
 | 全栈 Worker | Cloudflare Workers + OpenNext | 单 Worker 运行完整应用 |
 | 前端 | Next.js App Router + React + Tailwind CSS | 状态页与管理后台 |
 | API | Hono | 鉴权、节点、探测、告警与 Agent 接口 |
-| 数据与实时通道 | Cloudflare D1 + KV + Durable Objects | 持久数据、缓存、限流与 WebSocket 连接 |
+| 数据与实时通道 | Cloudflare D1 + KV + Durable Objects | 持久数据、低频登录保护与 WebSocket 连接 |
 | Agent | Go | VPS 资源采集与本地网络探测 |
 
 ## 快速部署

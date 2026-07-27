@@ -379,12 +379,6 @@ agentRoutes.post('/probe-results', async (c) => {
     result.error_message, result.probe_at,
   )))
 
-  await Promise.all(body.results.map(result => c.env.CACHE.put(
-    `latest:${body.node_id}:${result.target_id}`,
-    JSON.stringify({ node_id: body.node_id, ...result }),
-    { expirationTtl: 300 },
-  )))
-
   await notifyRealtime(c.env, { type: 'metrics_updated', node_id: body.node_id })
 
   return c.json(success({ accepted: body.results.length }))

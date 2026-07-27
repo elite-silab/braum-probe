@@ -191,10 +191,10 @@ describe('requireRoleForMutation', () => {
 })
 
 describe('rateLimit', () => {
-  it('未超限 → 通过', async () => {
+  it('高频接口默认使用内存计数，不读写 KV', async () => {
     const cache = createMockKV()
     const app = new Hono<{ Bindings: any }>()
-    app.use('/api', rateLimit(10, 60))
+    app.use('/api', rateLimit(10, 60, { scope: 'memory-only' }))
     app.get('/api', (c) => c.json({ ok: true }))
 
     const res = await app.fetch(
@@ -204,60 +204,89 @@ describe('rateLimit', () => {
       { CACHE: cache }
     )
     expect(res.status).toBe(200)
+    expect(cache.get).not.toHaveBeenCalled()
+    expect(cache.put).not.toHaveBeenCalled()
   })
 
   it('超限 → 429', async () => {
-    // KV mock 对所有 ratelimit: key 返回超限计数
-    const cache = {
-      get: vi.fn(async () => '10'),
-      put: vi.fn(),
-      delete: vi.fn(),
-    } as any
     const app = new Hono<{ Bindings: any }>()
-    app.use('/api', rateLimit(10, 60))
+    app.use('/api', rateLimit(2, 60, { scope: 'memory-limit' }))
     app.get('/api', (c) => c.json({ ok: true }))
 
-    const res = await app.fetch(
+    const request = () => app.fetch(
       new Request('http://localhost/api', {
         headers: { 'CF-Connecting-IP': '1.2.3.4' },
       }),
-      { CACHE: cache }
+      { CACHE: createMockKV() }
     )
+    expect((await request()).status).toBe(200)
+    expect((await request()).status).toBe(200)
+    const res = await request()
     expect(res.status).toBe(429)
     const body: any = await res.json()
     expect(body.code).toBe(42900)
   })
 
   it('不同 IP 独立计数', async () => {
-    // 对 1.1.1.1 返回超限，对 2.2.2.2 返回空
-    const cache = {
-      get: vi.fn(async (key: string) => {
-        if (key.includes('1.1.1.1')) return '10'
-        return null
-      }),
-      put: vi.fn(),
-      delete: vi.fn(),
-    } as any
     const app = new Hono<{ Bindings: any }>()
-    app.use('/api', rateLimit(10, 60))
+    app.use('/api', rateLimit(1, 60, { scope: 'separate-ips' }))
     app.get('/api', (c) => c.json({ ok: true }))
 
-    // IP 1.1.1.1 已超限
+    expect((await app.fetch(new Request('http://localhost/api', {
+      headers: { 'CF-Connecting-IP': '1.1.1.1' },
+    }), {})).status).toBe(200)
+
     const res1 = await app.fetch(
       new Request('http://localhost/api', {
         headers: { 'CF-Connecting-IP': '1.1.1.1' },
       }),
-      { CACHE: cache }
+      {}
     )
     expect(res1.status).toBe(429)
 
-    // IP 2.2.2.2 未超限
     const res2 = await app.fetch(
       new Request('http://localhost/api', {
         headers: { 'CF-Connecting-IP': '2.2.2.2' },
       }),
-      { CACHE: cache }
+      {}
     )
     expect(res2.status).toBe(200)
+  })
+
+  it('低频敏感接口可以启用 KV 协同限流', async () => {
+    const cache = {
+      get: vi.fn(async () => '5'),
+      put: vi.fn(),
+    } as any
+    const app = new Hono<{ Bindings: any }>()
+    app.use('/api', rateLimit(5, 60, { scope: 'distributed', distributed: true }))
+    app.get('/api', (c) => c.json({ ok: true }))
+
+    const res = await app.fetch(new Request('http://localhost/api', {
+      headers: { 'CF-Connecting-IP': '3.3.3.3' },
+    }), { CACHE: cache })
+
+    expect(res.status).toBe(429)
+    expect(cache.put).not.toHaveBeenCalled()
+  })
+
+  it('KV 写入额度耗尽时退回内存限流，不返回 500', async () => {
+    const cache = {
+      get: vi.fn(async () => null),
+      put: vi.fn(async () => { throw new Error('KV put() limit exceeded for the day.') }),
+    } as any
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const app = new Hono<{ Bindings: any }>()
+    app.use('/api', rateLimit(1, 60, { scope: 'kv-quota', distributed: true }))
+    app.get('/api', (c) => c.json({ ok: true }))
+
+    const request = () => app.fetch(new Request('http://localhost/api', {
+      headers: { 'CF-Connecting-IP': '4.4.4.4' },
+    }), { CACHE: cache })
+
+    expect((await request()).status).toBe(200)
+    expect((await request()).status).toBe(429)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('rate_limit_kv_unavailable'))
+    warn.mockRestore()
   })
 })

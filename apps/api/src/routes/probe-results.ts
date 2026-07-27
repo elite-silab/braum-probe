@@ -65,16 +65,9 @@ probeResultRoutes.get('/stats', async (c) => {
   return c.json(success(stats.results || []))
 })
 
-// GET /api/v1/probe-results/latest/:nodeId/:targetId — 最新探测结果（KV 缓存）
+// GET /api/v1/probe-results/latest/:nodeId/:targetId — 最新探测结果
 probeResultRoutes.get('/latest/:nodeId/:targetId', async (c) => {
   const { nodeId, targetId } = c.req.param()
-  const cached = await c.env.CACHE.get(`latest:${nodeId}:${targetId}`, 'json')
-
-  if (cached) {
-    return c.json(success(cached))
-  }
-
-  // Fallback to D1
   const result = await c.env.DB.prepare(
     'SELECT * FROM probe_results WHERE node_id = ? AND target_id = ? ORDER BY probe_at DESC LIMIT 1'
   ).bind(nodeId, targetId).first()

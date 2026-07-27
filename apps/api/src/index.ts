@@ -44,14 +44,14 @@ app.use('*', secureHeaders())
 app.route('/health', healthRoutes)
 
 // VPS Agent API — 使用节点专属凭据，不使用用户 JWT。
-app.use('/api/agent/v1/*', rateLimit(180, 60))
+app.use('/api/agent/v1/*', rateLimit(180, 60, { scope: 'agent' }))
 app.route('/api/agent/v1', agentRoutes)
 
 // ============================================
 // Public API — 前端展示页查询接口（无需鉴权）
 // ============================================
-app.use('/api/v1/auth/login', rateLimit(5, 60))
-app.use('/api/v1/auth/refresh', rateLimit(20, 60))
+app.use('/api/v1/auth/login', rateLimit(5, 60, { scope: 'auth-login', distributed: true }))
+app.use('/api/v1/auth/refresh', rateLimit(20, 60, { scope: 'auth-refresh', distributed: true }))
 app.route('/api/v1/auth', authRoutes)
 app.use('/api/v1/nodes', publicReadOnly)
 app.use('/api/v1/nodes/*', publicReadOnly)
@@ -60,14 +60,14 @@ app.route('/api/v1/probe-results', probeResultRoutes) // GET only
 app.use('/api/v1/incidents', publicReadOnly)
 app.use('/api/v1/incidents/*', publicReadOnly)
 app.route('/api/v1/incidents', incidentRoutes) // GET only for public
-app.use('/api/v1/realtime', rateLimit(30, 60))
+app.use('/api/v1/realtime', rateLimit(30, 60, { scope: 'viewer-realtime' }))
 app.route('/api/v1/realtime', realtimeRoutes)
 
 // ============================================
 // Admin API — 管理操作接口（需鉴权）
 // ============================================
 const admin = new Hono<{ Bindings: Env }>()
-admin.use('*', rateLimit(60, 60))  // 每 IP 每分钟 60 次
+admin.use('*', rateLimit(60, 60, { scope: 'admin' }))  // 每 IP 每分钟 60 次
 admin.use('*', authMiddleware)
 admin.use('/users', requireRoleForMutation('owner'))
 admin.use('/users/*', requireRoleForMutation('owner'))

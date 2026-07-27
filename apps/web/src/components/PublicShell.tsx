@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import ThemeSwitcher from './ThemeSwitcher'
+import packageJson from '../../package.json'
+
+const APP_VERSION = packageJson.version
 
 const navItems = [
   { href: '/', label: '总览', icon: 'overview', match: (path: string) => path === '/' || path.startsWith('/node/') },
@@ -84,7 +87,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
 
       <footer className="theme-border mt-auto border-t py-6 sm:py-8">
         <div className="theme-text-secondary mx-auto w-full max-w-7xl px-4 text-center text-xs sm:px-6 sm:text-sm lg:px-8">
-          <p>© {new Date().getFullYear()} 布隆探针 · 由 Next.js 与 Cloudflare Workers 驱动</p>
+          <p>© 2026 布隆探针 v{APP_VERSION} · 由 Next.js 与 Cloudflare Workers 驱动</p>
         </div>
       </footer>
 

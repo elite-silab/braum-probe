@@ -52,15 +52,24 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
           pattern: agent-linux-*
           merge-multiple: true
           path: dist
+      - name: Prepare release metadata
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#agent-v}"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-          name: Braum Agent ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          tag_name: ${{ steps.release.outputs.tag }}
+          name: Braum Agent v${{ steps.release.outputs.version }}
           make_latest: false
-          generate_release_notes: true
+          body_path: docs/releases/${{ steps.release.outputs.tag }}.md
           files: dist/*

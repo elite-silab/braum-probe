@@ -32,6 +32,7 @@
 | `JWT_SECRET` | Secret | 是 | Access Token 签名 |
 | `JWT_REFRESH_SECRET` | Secret | 是 | Refresh Token 签名 |
 | `ENCRYPTION_KEY` | Secret | 是 | 告警渠道配置加密 |
+| `ADMIN_INITIAL_EMAIL` | Text | 首次部署必填 | 初始管理员登录邮箱 |
 | `ADMIN_INITIAL_PASSWORD` | Secret | 首次部署必填 | 初始管理员密码 |
 | `TELEGRAM_BOT_TOKEN` | Secret | 否 | Telegram 默认机器人 Token |
 
@@ -42,6 +43,16 @@
 根目录 `.dev.vars` 使用同一组运行时变量名，但只保存本地测试值。`.dev.vars.example` 提供安全、不可用于生产的示例值。Wrangler 在本地开发时优先读取 `.dev.vars`，从而避免使用生产 `.env`。
 
 真实 `.dev.vars` 继续由 `.gitignore` 忽略；原有 `apps/api/.dev.vars` 迁移到根目录后删除。未使用 Telegram 时，开发文件中的 `TELEGRAM_BOT_TOKEN` 可以留空。
+
+### 初始管理员配置
+
+当前认证代码把 `admin@braum.local` 硬编码在首次管理员创建、旧密码哈希恢复、登录页默认值和文档中。实施时必须改为读取 `ADMIN_INITIAL_EMAIL`：
+
+- Worker 首次创建 Owner 时使用 `ADMIN_INITIAL_EMAIL`；
+- 旧 PBKDF2 哈希恢复校验同样使用配置的初始邮箱；
+- `ADMIN_INITIAL_EMAIL` 缺失或格式明显无效时返回明确的配置错误，不静默退回硬编码邮箱；
+- 登录页不再预填 `admin@braum.local`，由用户输入自己在 `.env` 和 Cloudflare 中配置的邮箱；
+- 文档中的登录说明引用 `ADMIN_INITIAL_EMAIL`，不再给出固定邮箱。
 
 ### `wrangler.jsonc`
 
@@ -59,7 +70,7 @@
 - 从生产 `.env` 移除与 `wrangler.jsonc` 重复的 `AGENT_API_URL`、`AGENT_RELEASE_BASE_URL`。
 - 从本机 `.env` 移除当前项目未使用的 `PUBLIC_API_URL`、`CORS_ORIGINS`、`SMTP_PASSWORD`、`WORKER_API_URL`。
 - 把 `apps/api/.dev.vars` 中已有的开发值迁移到根目录 `.dev.vars`，然后删除旧文件。
-- 保留 `.env` 中已有的五个 Cloudflare Secret 值；清理时不得在终端、日志或 Git diff 中输出真实值。
+- 保留 `.env` 中已有的生产值并补充 `ADMIN_INITIAL_EMAIL`；清理时不得在终端、日志或 Git diff 中输出真实值。
 
 ## 文档与交互
 
@@ -76,7 +87,7 @@ README、环境变量指南、小白部署指南和部署运维文档统一说�
 
 - `.gitignore` 必须忽略真实 `.env`、`.env.*`、`.dev.vars` 和 `.dev.vars.*`，仅允许 `.env.example` 与 `.dev.vars.example` 入库。
 - 文档和模板不得包含可用的生产密钥或密码。
-- 五个 Cloudflare 配置均按 Secret 类型保存，避免控制台明文展示。
+- `ADMIN_INITIAL_EMAIL` 使用 Cloudflare Text 类型；其余五项使用 Secret 类型，避免控制台明文展示。
 - `JWT_SECRET`、`JWT_REFRESH_SECRET` 和 `ENCRYPTION_KEY` 必须使用三个不同的随机长字符串。
 - `TELEGRAM_BOT_TOKEN` 未使用时可留空，不要求在 Cloudflare 创建。
 - `.dev.vars.example` 必须明确标注测试用途，其示例值不得复制到生产环境。
@@ -84,10 +95,11 @@ README、环境变量指南、小白部署指南和部署运维文档统一说�
 
 ## 验收标准
 
-- `.env.example` 只包含五个需手动填写到 Cloudflare 的变量，并清楚标注必填性和类型。
-- 本机 `.env` 只保留对应五个键及说明，真实值不出现在 Git 状态、diff 或日志中。
+- `.env.example` 只包含六个需手动填写到 Cloudflare 的变量，并清楚标注必填性和类型。
+- 本机 `.env` 只保留对应六个键及说明，真实值不出现在 Git 状态、diff 或日志中。
 - 根目录存在 `.dev.vars.example`；本机开发值位于被忽略的根目录 `.dev.vars`。
 - `apps/api/.dev.vars` 不再存在。
 - `wrangler.jsonc` 不含 Secret 值，并明确配置边界。
+- API、登录页和文档不再硬编码 `admin@braum.local`，首次 Owner 创建和旧哈希恢复使用 `ADMIN_INITIAL_EMAIL`。
 - README 与三份部署/配置文档明确区分生产 `.env` 和开发 `.dev.vars`，不再出现相互矛盾的指引。
 - `git diff --check`、配置引用检查和现有测试通过。

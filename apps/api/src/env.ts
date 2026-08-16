@@ -16,9 +16,10 @@ export interface Env {
   AGENT_API_URL: string
   AGENT_RELEASE_BASE_URL: string
 
-  // Secrets（生产环境由 Cloudflare Dashboard 设置，本地从仓库根目录 .env 读取）
+  // 生产环境由 Cloudflare Dashboard 设置；本地开发从根目录 .dev.vars 读取
   JWT_SECRET: string
   JWT_REFRESH_SECRET: string
+  ADMIN_INITIAL_EMAIL: string
   ADMIN_INITIAL_PASSWORD: string
   TELEGRAM_BOT_TOKEN: string
   ENCRYPTION_KEY: string

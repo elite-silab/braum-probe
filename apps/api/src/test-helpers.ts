@@ -76,6 +76,7 @@ export function createMockEnv(overrides?: {
     APP_VERSION: '0.1.0-test',
     JWT_SECRET: 'test-jwt-secret',
     JWT_REFRESH_SECRET: 'test-refresh-secret',
+    ADMIN_INITIAL_EMAIL: 'admin@braum.local',
     ADMIN_INITIAL_PASSWORD: 'admin123',
     TELEGRAM_BOT_TOKEN: '',
     ENCRYPTION_KEY: 'test-encryption-key',

@@ -5,6 +5,7 @@ import type { Env } from '../../../api/src/env'
 const localSecretNames = [
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
+  'ADMIN_INITIAL_EMAIL',
   'ADMIN_INITIAL_PASSWORD',
   'TELEGRAM_BOT_TOKEN',
   'ENCRYPTION_KEY',

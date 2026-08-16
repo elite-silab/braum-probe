@@ -15,10 +15,17 @@ import { writeAuditLog } from '../utils/audit'
 
 export const authRoutes = new Hono<{ Bindings: Env }>()
 
+function configuredAdminEmail(env: Env): string | null {
+  const email = env.ADMIN_INITIAL_EMAIL?.trim()
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+  return email
+}
+
 // POST /api/v1/auth/login — 登录
 authRoutes.post('/login', async (c) => {
   const body = await c.req.json()
-  const { email, password } = body
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const password = typeof body.password === 'string' ? body.password : ''
 
   if (!email || !password) {
     return c.json(badRequest('Missing email or password'), 400)
@@ -30,7 +37,15 @@ authRoutes.post('/login', async (c) => {
 
   // 首次登录时，用 ADMIN_INITIAL_PASSWORD 初始化管理员密码哈希
   if (!user) {
-    const adminEmail = 'admin@braum.local'
+    const adminEmail = configuredAdminEmail(c.env)
+    if (!adminEmail) {
+      return c.json({
+        code: 50302,
+        message: '初始管理员邮箱尚未配置，请在 Cloudflare Worker 中添加有效的 ADMIN_INITIAL_EMAIL',
+        data: null,
+      }, 503)
+    }
+
     if (email === adminEmail) {
       const initialPassword = c.env.ADMIN_INITIAL_PASSWORD
       if (initialPassword && password === initialPassword) {
@@ -69,9 +84,11 @@ authRoutes.post('/login', async (c) => {
 
   // 早期版本生成过 210,000 次 PBKDF2 哈希，超过 Workers 的 100,000 次上限。
   // 仅允许 Owner 使用仍保存在 Worker Secret 中的初始密码完成一次性安全迁移。
+  const adminEmail = configuredAdminEmail(c.env)
   if (
     !isValid
-    && email === 'admin@braum.local'
+    && adminEmail !== null
+    && email === adminEmail
     && password === c.env.ADMIN_INITIAL_PASSWORD
     && isPasswordHashUnsupported(user.password_hash as string)
   ) {

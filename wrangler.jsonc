@@ -16,8 +16,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "braum-production",
-      "database_id": "e29b2f97-aab9-4b97-976c-469076528cf9",
+      "database_name": "braum-production-v2",
+      "database_id": "ac1267c2-abd2-4796-98ad-13be318997a0",
       "migrations_dir": "apps/api/migrations"
     }
   ],

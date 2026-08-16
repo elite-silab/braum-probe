@@ -52,7 +52,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }
 
   const name = user.name || 'Admin'
-  const email = user.email || 'admin@braum.local'
+  const email = user.email || '管理员'
 
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--surface-body)' }}>

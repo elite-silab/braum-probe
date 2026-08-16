@@ -6,7 +6,7 @@ import { adminApi } from '../../../../lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('admin@braum.local')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -44,7 +44,7 @@ export default function LoginPage() {
           <form className="space-y-4" onSubmit={submit}>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               邮箱
-              <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+              <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="owner@example.com" />
             </label>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               密码

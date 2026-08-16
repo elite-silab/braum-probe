@@ -8,6 +8,7 @@
     "binding": "ASSETS",
     "directory": "./apps/web/.open-next/assets"
   },
+  // 生产 Secrets 不写入仓库；请保存在本机 .env，并在 Cloudflare 控制台手动填写。
   "vars": {
     "APP_VERSION": "0.2.1",
     "AGENT_API_URL": "https://braum-probe.codeelite.workers.dev",

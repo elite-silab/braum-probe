@@ -1,0 +1,11 @@
+# Braum 本地开发变量
+#
+# 在文件管理器中复制本文件并将副本改名为 .dev.vars。
+# 这里的值只用于本地开发，禁止复制到生产环境。
+
+ADMIN_INITIAL_EMAIL=admin@braum.local
+ADMIN_INITIAL_PASSWORD=braum-local-admin
+JWT_SECRET=local-only-jwt-secret
+JWT_REFRESH_SECRET=local-only-refresh-secret
+ENCRYPTION_KEY=local-only-encryption-key
+TELEGRAM_BOT_TOKEN=

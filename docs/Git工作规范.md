@@ -63,7 +63,7 @@ git worktree prune
 - 一个分支只能被一个 worktree 检出。
 - worktree 统一放在主仓库同级目录，命名为 `braum-<feature>`。
 - 删除前确认分支已经推送或合并，且目录没有未提交修改。
-- 根目录 `.env` 按 worktree 单独创建，不使用软链接共享秘密；项目不再使用 `.dev.vars`。
+- 生产 `.env` 只保存在受控的维护工作区，不使用软链接共享；每个需要本地运行的 worktree 单独创建根目录 `.dev.vars`，禁止复用生产密钥。
 - D1 migration 版本号可能冲突；合并主干后必须重新检查顺序并通过 `wrangler d1 migrations apply --local` 运行全量迁移测试。
 
 ## 4. 提交规范
@@ -181,6 +181,9 @@ Workers 后端使用 TypeScript，通过 `zod` schema 定义请求/响应类型�
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 node_modules/
 .wrangler/
 .next/
@@ -193,7 +196,8 @@ tmp/
 *.test
 ```
 
-- 仓库只提交 `.env.example`，值使用明显的本地占位符。
+- 仓库只提交生产备忘模板 `.env.example` 和开发模板 `.dev.vars.example`；真实 `.env`、`.dev.vars` 均只保存在本机。
+- `.env.example` 使用明显的生产占位符；`.dev.vars.example` 只使用不可用于生产的测试值。
 - Cloudflare Secrets 通过 Dashboard 的 Variables and Secrets 页面或 Wrangler 设置，**禁止**提交到仓库。
 - 禁止提交密码、token、私钥、真实邮箱列表、D1 数据库快照或含个人信息的日志。
 - 即使秘密随后从 Git 删除，也应视为已泄露并立即轮换。
@@ -228,7 +232,7 @@ tmp/
 
 - [ ] D1 migration 在空库与升级路径通过（`wrangler d1 migrations apply --local`）。
 - [ ] 索引覆盖主要查询路径，使用 `EXPLAIN QUERY PLAN` 验证。
-- [ ] 新增本地变量已记录到 `.env.example`；新增生产 Secret 已记录到配置与部署文档。
+- [ ] 新增生产变量已记录到 `.env.example` 和部署文档；新增开发变量已记录到 `.dev.vars.example`。
 - [ ] 根目录 `wrangler.jsonc` 与部署文档保持同步，仓库没有第二份 Wrangler 配置。
 - [ ] 部署和回滚不依赖不可逆的 schema 删除。
 

@@ -130,23 +130,27 @@ https://braum-probe.你的Workers子域.workers.dev
 
 这里必须创建 **Worker**，不要选择 Pages，也不要填写 Build output directory。
 
-### 5. 填写生产密钥
+### 5. 填写生产变量
 
-进入这个 Worker 的 **Settings → Variables and Secrets**，添加四个加密 Secret：
+先在自己的电脑上复制 `.env.example` 并将副本改名为 `.env`，填写生产值。这个 `.env` 只是一份不会自动上传、也不会提交 Git 的私密备忘录。
 
-| 名称 | 内容 |
-|---|---|
-| `JWT_SECRET` | 密码管理器生成的随机长字符串 |
-| `JWT_REFRESH_SECRET` | 另一个不同的随机长字符串 |
-| `ENCRYPTION_KEY` | 再一个不同的随机长字符串 |
-| `ADMIN_INITIAL_PASSWORD` | 管理后台初始密码 |
+然后对照 `.env`，进入这个 Worker 的 **Settings → Variables and Secrets**，逐项添加：
 
-保存后重新部署一次。不要把这些生产密钥写入仓库。
+| 名称 | 类型 | 内容 |
+|---|---|---|
+| `ADMIN_INITIAL_EMAIL` | Text | 管理后台初始邮箱 |
+| `ADMIN_INITIAL_PASSWORD` | Secret | 管理后台初始密码 |
+| `JWT_SECRET` | Secret | 密码管理器生成的随机长字符串 |
+| `JWT_REFRESH_SECRET` | Secret | 另一个不同的随机长字符串 |
+| `ENCRYPTION_KEY` | Secret | 再一个不同的随机长字符串 |
+| `TELEGRAM_BOT_TOKEN` | Secret | 可选；不用 Telegram 时无需添加 |
+
+保存后重新部署一次。前三个安全密钥必须互不相同，不要把 `.env` 或生产密钥写入仓库。
 
 ### 6. 登录并安装 Agent
 
 1. 打开 Worker 地址的 `/admin`。
-2. 邮箱使用 `admin@braum.local`，密码使用刚设置的 `ADMIN_INITIAL_PASSWORD`。
+2. 邮箱使用 `ADMIN_INITIAL_EMAIL`，密码使用 `ADMIN_INITIAL_PASSWORD`。
 3. 进入「VPS 节点」并添加节点，只需填写名称。
 4. 复制后台生成的安装命令，在被监控 VPS 上执行。
 5. 等待约一分钟，节点会开始上报资源和探测数据。
@@ -171,11 +175,12 @@ https://braum-probe.你的Workers子域.workers.dev
 git clone https://github.com/elite-silab/braum-probe.git
 cd braum-probe
 pnpm install
-cp .env.example .env
 pnpm dev
 ```
 
-直接编辑根目录 `.env` 即可调整本地密码或 Agent 地址。`pnpm dev` 会通过 `predev` 自动执行本地 D1 migration。
+在文件管理器中复制根目录 `.dev.vars.example`，将副本改名为 `.dev.vars`。它只保存本地测试值，不能填写生产密钥。生产 `.env` 仅作为 Cloudflare 变量备忘录，不能用于本地开发。
+
+`pnpm dev` 会通过 `predev` 自动执行本地 D1 migration。
 
 - 网站：`http://localhost:3000`
 - 管理后台：`http://localhost:3000/admin`

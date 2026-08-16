@@ -29,9 +29,10 @@ function mockDBWithUser(user: Record<string, unknown> | null) {
 
 const ENV_BASE = {
   CACHE: createMockKV(),
-  APP_VERSION: '0.1.0',
+  APP_VERSION: '0.2.1',
   JWT_SECRET: 'test-jwt-secret',
   JWT_REFRESH_SECRET: 'test-refresh-secret',
+  ADMIN_INITIAL_EMAIL: 'owner@example.com',
   ADMIN_INITIAL_PASSWORD: 'admin123',
   TELEGRAM_BOT_TOKEN: '',
   ENCRYPTION_KEY: '',
@@ -58,7 +59,7 @@ describe('POST /api/v1/auth/login', () => {
     const passwordHash = await hashPassword('admin123')
     const newUser = {
       id: 'admin-uuid',
-      email: 'admin@braum.local',
+      email: 'owner@example.com',
       name: 'Admin',
       password_hash: passwordHash,
       role: 'owner',
@@ -84,7 +85,7 @@ describe('POST /api/v1/auth/login', () => {
     const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@braum.local', password: 'admin123' }),
+      body: JSON.stringify({ email: 'owner@example.com', password: 'admin123' }),
     }))
 
     expect(res.status).toBe(200)
@@ -92,7 +93,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(body.code).toBe(0)
     expect(body.data.access_token).toBeDefined()
     expect(body.data.refresh_token).toBeDefined()
-    expect(body.data.user.email).toBe('admin@braum.local')
+    expect(body.data.user.email).toBe('owner@example.com')
   })
 
   it('管理员初始密码错误 → 401', async () => {
@@ -102,9 +103,31 @@ describe('POST /api/v1/auth/login', () => {
     const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@braum.local', password: 'wrong' }),
+      body: JSON.stringify({ email: 'owner@example.com', password: 'wrong' }),
     }))
     expect(res.status).toBe(401)
+  })
+
+  it.each([
+    ['', '缺失'],
+    ['not-an-email', '格式无效'],
+  ])('ADMIN_INITIAL_EMAIL %s时返回明确的配置错误', async (configuredEmail) => {
+    const db = mockDBWithUser(null)
+    const app = createApp({
+      ...ENV_BASE,
+      DB: db,
+      ADMIN_INITIAL_EMAIL: configuredEmail,
+    })
+
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'owner@example.com', password: 'admin123' }),
+    }))
+
+    expect(res.status).toBe(503)
+    const body: any = await res.json()
+    expect(body.message).toContain('ADMIN_INITIAL_EMAIL')
   })
 
   it('已有用户正确密码登录 → 200 + tokens', async () => {
@@ -199,7 +222,7 @@ describe('POST /api/v1/auth/login', () => {
     const unsupportedHash = `pbkdf2-sha256$210000$${'00'.repeat(16)}$${'00'.repeat(32)}`
     const user = {
       id: 'admin-1',
-      email: 'admin@braum.local',
+      email: 'owner@example.com',
       name: 'Admin',
       password_hash: unsupportedHash,
       role: 'owner',
@@ -211,7 +234,7 @@ describe('POST /api/v1/auth/login', () => {
     const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@braum.local', password: 'admin123' }),
+      body: JSON.stringify({ email: 'owner@example.com', password: 'admin123' }),
     }))
 
     expect(res.status).toBe(200)
@@ -225,7 +248,7 @@ describe('POST /api/v1/auth/login', () => {
   it('不支持的旧哈希不能被错误的初始密码绕过', async () => {
     const user = {
       id: 'admin-1',
-      email: 'admin@braum.local',
+      email: 'owner@example.com',
       name: 'Admin',
       password_hash: `pbkdf2-sha256$210000$${'00'.repeat(16)}$${'00'.repeat(32)}`,
       role: 'owner',
@@ -237,7 +260,7 @@ describe('POST /api/v1/auth/login', () => {
     const res = await app.fetch(new Request('http://localhost/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@braum.local', password: 'wrong' }),
+      body: JSON.stringify({ email: 'owner@example.com', password: 'wrong' }),
     }))
 
     expect(res.status).toBe(401)

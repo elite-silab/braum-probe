@@ -6,52 +6,63 @@ import { evaluateAlerts } from './alert-evaluator'
 
 /**
  * Workers Scheduled Event 处理器
- * 根据 Cron 表达式分发不同任务
+ * 只使用一条每分钟 Cron，再按 UTC 时间分发任务，节省免费套餐的 Cron 配额。
  */
 export async function handleScheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
   const cron = event.cron
+  const scheduledAt = new Date(Number.isFinite(event.scheduledTime) ? event.scheduledTime : Date.now())
+  const minute = scheduledAt.getUTCMinutes()
+  const hour = scheduledAt.getUTCHours()
+  const isTopOfHour = minute === 0
 
-  try {
-    switch (cron) {
-      case '*/2 * * * *':
-        // 每 2 分钟：告警状态评估
-        console.log(JSON.stringify({ event: 'cron', task: 'alert_evaluation', cron }))
-        await evaluateAlerts(env)
-        break
+  const tasks: Array<{ name: string; enabled: boolean; run: () => Promise<void> }> = [
+    {
+      name: 'agent_heartbeat_check',
+      enabled: true,
+      run: () => checkNodeHeartbeats(env),
+    },
+    {
+      name: 'alert_evaluation',
+      enabled: minute % 2 === 0,
+      run: () => evaluateAlerts(env),
+    },
+    {
+      name: 'hourly_aggregation',
+      enabled: isTopOfHour,
+      run: () => aggregateHourly(env, scheduledAt),
+    },
+    {
+      name: 'daily_aggregation',
+      enabled: isTopOfHour && hour === 2,
+      run: () => aggregateDaily(env, scheduledAt),
+    },
+    {
+      name: 'data_cleanup',
+      enabled: isTopOfHour && hour === 3,
+      run: () => cleanupExpiredData(env),
+    },
+  ]
 
-      case '* * * * *':
-        // 每分钟：只检查 Agent 心跳。探测任务由 VPS Agent 在本机执行。
-        console.log(JSON.stringify({ event: 'cron', task: 'agent_heartbeat_check', cron }))
-        await checkNodeHeartbeats(env)
-        break
+  for (const task of tasks) {
+    if (!task.enabled) continue
 
-      case '0 * * * *':
-        // 每小时整点：小时聚合
-        console.log(JSON.stringify({ event: 'cron', task: 'hourly_aggregation', cron }))
-        await aggregateHourly(env)
-        break
-
-      case '0 2 * * *':
-        // 每天凌晨 2 点：日聚合
-        console.log(JSON.stringify({ event: 'cron', task: 'daily_aggregation', cron }))
-        await aggregateDaily(env)
-        break
-
-      case '0 3 * * *':
-        // 每天凌晨 3 点：过期数据清理
-        console.log(JSON.stringify({ event: 'cron', task: 'data_cleanup', cron }))
-        await cleanupExpiredData(env)
-        break
-
-      default:
-        console.log(JSON.stringify({ event: 'cron', task: 'unknown', cron }))
+    try {
+      console.log(JSON.stringify({
+        event: 'cron',
+        task: task.name,
+        cron,
+        scheduled_at: scheduledAt.toISOString(),
+      }))
+      await task.run()
+    } catch (error) {
+      console.error(JSON.stringify({
+        event: 'cron_error',
+        task: task.name,
+        cron,
+        scheduled_at: scheduledAt.toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }))
     }
-  } catch (error) {
-    console.error(JSON.stringify({
-      event: 'cron_error',
-      cron,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }))
   }
 }
 

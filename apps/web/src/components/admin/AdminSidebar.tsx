@@ -166,12 +166,9 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: AdminSidebar
       {mobileOpen ? (
         <div className="fixed inset-0 z-[70] md:hidden">
           <button type="button" className="absolute inset-0 bg-slate-950/55 backdrop-blur-[2px]" onClick={onMobileClose} aria-label="关闭管理导航" />
-          <aside className="admin-sidebar-surface theme-border relative flex h-full w-[min(19rem,88vw)] flex-col rounded-r-2xl border-r shadow-2xl" aria-label="管理导航">
-            <div className="theme-border flex h-[76px] shrink-0 items-center justify-between border-b px-4">
+          <aside className="admin-sidebar-surface theme-border relative flex h-full w-[min(19rem,88vw)] flex-col border-r shadow-2xl" aria-label="管理导航">
+            <div className="theme-border flex h-[76px] shrink-0 items-center border-b px-4">
               <Brand />
-              <button type="button" onClick={onMobileClose} className="theme-text-secondary theme-hover flex h-9 w-9 items-center justify-center rounded-xl" aria-label="关闭管理导航">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-              </button>
             </div>
             <Navigation currentPath={currentPath} onNavigate={onMobileClose} />
             <SidebarFooter onNavigate={onMobileClose} />

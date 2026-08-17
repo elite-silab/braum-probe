@@ -16,4 +16,13 @@ describe('AdminSidebar', () => {
     expect(html).not.toContain('收起侧栏')
     expect(html).not.toContain('展开侧栏')
   })
+
+  it('移动端抽屉使用贴边直角面板且不显示 X 关闭按钮', () => {
+    const html = renderToStaticMarkup(
+      <AdminSidebar mobileOpen onMobileClose={() => undefined} />
+    )
+
+    expect(html).not.toContain('rounded-r-2xl')
+    expect(html.match(/aria-label="关闭管理导航"/g)).toHaveLength(1)
+  })
 })

@@ -9,10 +9,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (localStorage.getItem('token')) router.replace('/admin')
+    const loginMessage = sessionStorage.getItem('braum-login-message')
+    if (loginMessage) {
+      setMessage(loginMessage)
+      sessionStorage.removeItem('braum-login-message')
+    }
   }, [router])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -50,6 +56,7 @@ export default function LoginPage() {
               密码
               <input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white" placeholder="请输入密码" />
             </label>
+            {message && <div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">{message}</div>}
             {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">{error}</div>}
             <button type="submit" disabled={submitting} className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
               {submitting ? '登录中…' : '登录'}

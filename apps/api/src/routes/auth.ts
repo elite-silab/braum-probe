@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from '../utils/jwt'
 import { writeAuditLog } from '../utils/audit'
+import { authMiddleware } from '../middleware/auth'
 
 export const authRoutes = new Hono<{ Bindings: Env }>()
 
@@ -165,6 +166,48 @@ authRoutes.post('/refresh', async (c) => {
 // POST /api/v1/auth/logout — 登出
 authRoutes.post('/logout', async (c) => {
   // 客户端清除 Token 即可，服务端可选黑名单机制
+  return c.json(success(null))
+})
+
+// POST /api/v1/auth/change-password — 已登录用户修改自己的密码
+authRoutes.post('/change-password', authMiddleware, async (c) => {
+  const body = await c.req.json()
+  const currentPassword = typeof body.current_password === 'string' ? body.current_password : ''
+  const newPassword = typeof body.new_password === 'string' ? body.new_password : ''
+
+  if (!currentPassword || currentPassword.length > 128) {
+    return c.json(badRequest('当前密码格式无效'), 400)
+  }
+  if (newPassword.length < 12 || newPassword.length > 128) {
+    return c.json(badRequest('新密码长度必须为 12–128 个字符'), 400)
+  }
+  if (currentPassword === newPassword) {
+    return c.json(badRequest('新密码不能与当前密码相同'), 400)
+  }
+
+  const userId = c.get('userId' as never) as string
+  const user = await c.env.DB.prepare(
+    'SELECT id, password_hash FROM users WHERE id = ? AND status = ?'
+  ).bind(userId, 'active').first() as { id: string; password_hash: string | null } | null
+
+  if (!user?.password_hash || !await verifyPassword(currentPassword, user.password_hash)) {
+    return c.json(unauthorized('当前密码不正确'), 401)
+  }
+
+  const passwordHash = await hashPassword(newPassword)
+  await c.env.DB.prepare(
+    "UPDATE users SET password_hash = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+  ).bind(passwordHash, userId).run()
+
+  await writeAuditLog(c.env, {
+    user_id: userId,
+    action: 'change_password',
+    object_type: 'user',
+    object_id: userId,
+    ip_address: c.req.header('CF-Connecting-IP'),
+    user_agent: c.req.header('User-Agent'),
+  })
+
   return c.json(success(null))
 })
 

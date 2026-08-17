@@ -106,6 +106,12 @@ export const adminApi = {
   me: () => request<{ id: string; email: string; name: string; role: string }>(
     `${API_BASE}/api/v1/auth/me`, { headers: authHeaders() }
   ),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<null>(`${API_BASE}/api/v1/auth/change-password`, {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      headers: authHeaders(),
+    }),
 
   // 节点管理
   getNodes: (page = 1) => request<unknown[]>(`${ADMIN_API_BASE}/nodes?page=${page}`, {

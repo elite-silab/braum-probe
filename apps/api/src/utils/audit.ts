@@ -4,7 +4,7 @@ import type { Env } from '../env'
 
 interface AuditLogInput {
   user_id?: string
-  action: 'create' | 'update' | 'delete' | 'login' | 'logout'
+  action: 'create' | 'update' | 'delete' | 'login' | 'logout' | 'change_password'
   object_type: 'node' | 'target' | 'alert_rule' | 'alert_channel' | 'incident' | 'user' | 'setting' | 'agent_enrollment' | 'agent_credential'
   object_id?: string
   changes?: Record<string, unknown>

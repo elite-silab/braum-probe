@@ -359,6 +359,116 @@ describe('POST /api/v1/auth/logout', () => {
   })
 })
 
+describe('POST /api/v1/auth/change-password', () => {
+  async function authenticatedRequest(body: Record<string, unknown>, db: ReturnType<typeof mockDBWithUser>) {
+    const token = await signToken(
+      { sub: 'user-1', email: 'test@example.com', role: 'owner' },
+      'test-jwt-secret'
+    )
+    const app = createApp({ ...ENV_BASE, DB: db })
+    return app.fetch(new Request('http://localhost/api/v1/auth/change-password', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }))
+  }
+
+  it('未登录时拒绝修改密码', async () => {
+    const db = mockDBWithUser(null)
+    const app = createApp({ ...ENV_BASE, DB: db })
+    const res = await app.fetch(new Request('http://localhost/api/v1/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: 'current-password', new_password: 'new-password-123' }),
+    }))
+
+    expect(res.status).toBe(401)
+  })
+
+  it('当前密码错误时拒绝修改', async () => {
+    const user = {
+      id: 'user-1', email: 'test@example.com', name: 'Test',
+      password_hash: await hashPassword('current-password'), role: 'owner', status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const res = await authenticatedRequest({
+      current_password: 'wrong-password',
+      new_password: 'new-password-123',
+    }, db)
+
+    expect(res.status).toBe(401)
+    expect(db.prepare.mock.calls.some(([sql]: string[]) => sql.includes('UPDATE users SET password_hash'))).toBe(false)
+  })
+
+  it.each(['short', 'x'.repeat(129)])('拒绝不符合长度要求的新密码', async (newPassword) => {
+    const user = {
+      id: 'user-1', email: 'test@example.com', name: 'Test',
+      password_hash: await hashPassword('current-password'), role: 'owner', status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const res = await authenticatedRequest({
+      current_password: 'current-password',
+      new_password: newPassword,
+    }, db)
+
+    expect(res.status).toBe(400)
+  })
+
+  it('拒绝超长的当前密码输入', async () => {
+    const user = {
+      id: 'user-1', email: 'test@example.com', name: 'Test',
+      password_hash: await hashPassword('current-password'), role: 'owner', status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const res = await authenticatedRequest({
+      current_password: 'x'.repeat(129),
+      new_password: 'new-password-123',
+    }, db)
+
+    expect(res.status).toBe(400)
+  })
+
+  it('拒绝继续使用当前密码', async () => {
+    const user = {
+      id: 'user-1', email: 'test@example.com', name: 'Test',
+      password_hash: await hashPassword('current-password'), role: 'owner', status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const res = await authenticatedRequest({
+      current_password: 'current-password',
+      new_password: 'current-password',
+    }, db)
+
+    expect(res.status).toBe(400)
+  })
+
+  it('验证当前密码后更新当前用户的密码哈希', async () => {
+    const user = {
+      id: 'user-1', email: 'test@example.com', name: 'Test',
+      password_hash: await hashPassword('current-password'), role: 'owner', status: 'active',
+    }
+    const db = mockDBWithUser(user)
+    const res = await authenticatedRequest({
+      current_password: 'current-password',
+      new_password: 'new-password-123',
+    }, db)
+
+    expect(res.status).toBe(200)
+    const updateSql = db.prepare.mock.calls
+      .map((call: string[]) => call[0])
+      .find((sql: string) => sql.includes('UPDATE users SET password_hash'))
+    expect(updateSql).toBeDefined()
+    const updateBind = db._chain.bind.mock.calls.find((args: unknown[]) => args[1] === 'user-1')
+    expect(updateBind).toBeDefined()
+    expect(updateBind?.[0]).not.toBe(user.password_hash)
+    const body: any = await res.json()
+    expect(body.code).toBe(0)
+  })
+})
+
 describe('GET /api/v1/auth/me', () => {
   it('无 token → 401', async () => {
     const db = mockDBWithUser(null)

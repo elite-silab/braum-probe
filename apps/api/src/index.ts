@@ -60,6 +60,7 @@ app.route('/api/agent/v1', agentRoutes)
 // ============================================
 app.use('/api/v1/auth/login', rateLimit(5, 60, { scope: 'auth-login', distributed: true }))
 app.use('/api/v1/auth/refresh', rateLimit(20, 60, { scope: 'auth-refresh', distributed: true }))
+app.use('/api/v1/auth/change-password', rateLimit(5, 60, { scope: 'auth-change-password', distributed: true }))
 app.route('/api/v1/auth', authRoutes)
 app.use('/api/v1/nodes', publicReadOnly)
 app.use('/api/v1/nodes/*', publicReadOnly)

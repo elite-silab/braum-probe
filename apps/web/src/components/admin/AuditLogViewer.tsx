@@ -70,8 +70,16 @@ export default function AuditLogViewer() {
           update: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
           delete: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
           login: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+          change_password: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
         }
-        return <span className={`rounded-full px-2 py-1 text-xs ${colorMap[action] || 'bg-slate-100 text-slate-700'}`}>{action}</span>
+        const labelMap: Record<string, string> = {
+          create: '创建',
+          update: '更新',
+          delete: '删除',
+          login: '登录',
+          change_password: '修改密码',
+        }
+        return <span className={`rounded-full px-2 py-1 text-xs ${colorMap[action] || 'bg-slate-100 text-slate-700'}`}>{labelMap[action] || action}</span>
       },
     },
     { key: 'object_type', label: '对象类型' },
@@ -115,6 +123,7 @@ export default function AuditLogViewer() {
           <option value="update">更新</option>
           <option value="delete">删除</option>
           <option value="login">登录</option>
+          <option value="change_password">修改密码</option>
         </select>
         <select
           value={objectTypeFilter}

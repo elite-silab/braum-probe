@@ -17,6 +17,10 @@
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT" />
 </p>
 
+<p align="center">
+  <strong>同一作者的其他作品：<a href="https://labs.zhelichuhai.com/zh-hans/finalssh">FinalSSH 跨平台 SSH 客户端</a> · <a href="https://labs.zhelichuhai.com/zh-hans/nami">Nami 娜美博客</a></strong>
+</p>
+
 ## 为什么选择 Braum？
 
 - **只部署一个 Worker**：网站、管理后台、API、Agent 接口和 Cron 共用一个地址与一份配置。
